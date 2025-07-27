@@ -38,7 +38,13 @@ def index():
     #全データを取得してグラフに渡す
     conn = sqlite3.connect('diet.db')
     cur = conn.cursor()
-    cur.execute("SELECT date,weight FROM weights ORDER BY date")
+    # 同じ日付の場合、その日付の最小値の体重をとってくる
+    cur.execute("""
+                SELECT date,MIN(weight) 
+                FROM weights 
+                GROUP BY date
+                ORDER BY date
+                """)
     data = cur.fetchall()
     conn.close()
     dates = [row[0] for row in data]
