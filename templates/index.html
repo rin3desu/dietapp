@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>ダイエット記録アプリ</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src = "https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <h1>体重記録フォーム</h1>
@@ -17,6 +18,7 @@
     </form>
 
     <h2>体重記録　一覧</h2>
+    <canvas id ="weightChart" width="400" height="200"></canvas>
     <table border="1">
         <tr> 
             <th>日付</th>
@@ -33,3 +35,41 @@
     </table>
 </body>
 </html>
+
+<script>
+    const ctx = document.getElementById('weightChart').getContext('2d');
+    const weightChart = new Chart(ctx,{
+        type: 'line',
+        data:{
+            labels: {{ dates | tojson }},
+            datasets:[{
+                label: '体重の推移',
+                data: {{weights | tojson}},
+                borderColor: 'rgba(75, 192,192, 1)',
+                backgroundColor: 'rgba(75,192,192, 0.2)',
+                fill: false,
+                tension: 0.1
+            }]
+        },
+
+        options: {
+            responsive: true,
+            scales:{
+                x: {
+                    title:{
+                        display : true,
+                        text: '日付'
+                    }
+                },
+
+                y:{
+                    title: {
+                        display: true,
+                        text: '体重(kg)'
+                    },
+                    beginAtZero: false
+                }
+            }
+        }
+    });
+</script>
