@@ -14,6 +14,18 @@ def init_db():
             weight REAL NOT NULL
             )
         ''')
+    
+    # 食事テーブルを作成（まだ存在しない場合のみ）
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS meals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL,
+        time_slot TEXT NOT NULL,
+        content TEXT NOT NULL,
+        ingredients TEXT,
+        image_path TEXT
+    )
+    """)
     conn.commit()
     conn.close()
 
