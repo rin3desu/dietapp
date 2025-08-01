@@ -27,7 +27,11 @@ def index():
     
     if request.method == "POST":
         weight = request.form.get("weight")
-        date = request.form.get("date") 
+        date_part = request.form.get("date") 
+        
+        #送信された日付に現在の時刻
+        now_time = datetime.now().strftime("%H:%M:%S")
+        full_datetime = f"{date_part} {now_time}"
         
         conn = sqlite3.connect('diet.db')
         cur = conn.cursor()
