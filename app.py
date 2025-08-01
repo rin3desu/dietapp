@@ -33,24 +33,30 @@ def index():
         now_time = datetime.now().strftime("%H:%M:%S")
         full_datetime = f"{date_part} {now_time}"
         
-        conn = sqlite3.connect('diet.db')
-        cur = conn.cursor()
-        cur.execute("INSERT INTO weights (date, weight) VALUES (?, ?)", (date,weight))
-        conn.commit()
-        conn.close()
-        
-    #全データを取得してグラフに渡す
-    conn = sqlite3.connect('diet.db')
-    cur = conn.cursor()
+        try:
+            # sqlite3.connect() as connによって自動でconn.commit()とconn.close()をしてくれる
+            with sqlite3.connect('diet.db') as conn:
+                cur = conn.cursor()
+                cur.execute("INSERT INTO weights (date, weight) VALUES (?, ?)", (full_datetime,weight))
+                conn.commit()
+        except sqlite3.OperationalError as e:
+            return f"エラーが発生しました: {e}"
+    try:
+        with sqlite3.connect('diet.db') as conn:
+            cur = conn.cursor()
     # 同じ日付の場合、その日付の最小値の体重をとってくる
-    cur.execute("""
+            cur.execute("""
                 SELECT date,MIN(weight) 
                 FROM weights 
                 GROUP BY date
                 ORDER BY date
-                """)
-    data = cur.fetchall()
-    conn.close()
+            """)
+            data = cur.fetchall()
+            cur.execute("SELECT date, weight FROM weights ORDER BY date DESC")
+            records = cur.fetchall()
+    except sqlite3.OperationalError as e:
+        return f"エラーが発生しました： {e}" 
+    
     dates = [row[0] for row in data]
     weights = [row[1] for row in data]
     
