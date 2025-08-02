@@ -1,8 +1,11 @@
 import sqlite3
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect
+from werkzeug.utils import secure_filename
+import sqlite3
 from datetime import datetime
 
 app = Flask(__name__)  # Flaskアプリケーションのインスタンスを作成
+app.config['UPLOAD_FOLDER'] = 'static/uploads'
 
 def init_db():
     conn = sqlite3.connect('diet.db')
@@ -31,6 +34,32 @@ def init_db():
 
 init_db()  #アプリ起動時に1度だけ呼び出す
 
+@app.route('/add_meal', methods =['GET' , 'POST'])
+def add_meal():
+    if request.method == 'POST':
+        date = request.form['date']
+        time = request.form['time']
+        meal = request.form['meal']
+        ingredients = request.form.get('ingredients')
+        photo = request.files.get('image')
+        
+        photo_path = None
+        if photo and photo.filename:
+            filename = secure_filename(photo.filename)
+            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            photo.save(photo_path)
+        
+        try:
+            # sqlite3.connect() as connによって自動でconn.commit()とconn.close()をしてくれる
+            with sqlite3.connect('diet.db') as conn:
+                cur = conn.cursor()
+                cur.execute('INSERT INTO meals (date, time_slot, content, ingredients, image_path) VALUES (?,?,?,?,?)', (date,time,meal,ingredients,photo_path))
+                conn.commit()
+        except sqlite3.OperationalError as e:
+            return f"エラーが発生しました: {e}" 
+        
+        return redirect('/')
+    return render_template('meal_form.html')
 
 @app.route("/",methods=["GET","POST"])  # URLのルート("/")にアクセスしたときに実行される関数を指定
 def index():

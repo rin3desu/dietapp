@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>食事記録</title>
+</head>
+<body>
+    <h1>食事を記録する</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <label for="data">日付:</label> 
+        <input type="date" name="date" required><br>
+        <label for ="time"> 時間帯: </label>
+        <select name ="time" required>
+            <option value ="朝">朝</option>
+            <option value ="昼">昼</option>
+            <option value ="晩">晩</option>
+            <option value ="間食">間食</option>
+        </select><br>
+
+        <label for="meal">食べたもの:</label>
+        <input type ="text" name="meal" required><br>
+
+        <label for="meal">使用した食材（任意）:</label>
+        <input type ="text" name="ingredients"><br>
+
+        <label for="meal">写真</label>
+        <input type ="file" name="photo"><br>
+
+        <input type ="submit" value="記録する">
+    </form>
+</body>
+</html>
