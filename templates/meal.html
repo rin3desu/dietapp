@@ -1,0 +1,48 @@
+{% extends 'layout.html' %}
+
+{% block title %}食事記録 - Diet App{% endblock %}
+
+{% block content %}
+    <h1>食事記録</h1>
+
+    <a href="{{ url_for('meal_form') }}">
+        <button style="font-size: 1.2em; padding: 10px;">新しい食事を記録する</button>
+    </a>
+    
+    <hr>
+
+    <h2>食事履歴</h2>
+    <table border="1" style="width:100%; margin-top: 1em;">
+        <thead>
+            <tr>
+                <th style="width: 10%;">日付</th>
+                <th style="width: 8%;">時間帯</th>
+                <th style="width: 25%;">内容</th>
+                <th style="width: 25%;">食材</th>
+                <th style="width: 22%;">写真</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for meal in meals %}
+            <tr>
+                <td>{{ meal['date'] }}</td>
+                <td>{{ meal['time_slot'] }}</td>
+                
+                <td style="white-space: pre-wrap;">{{ meal['content'] }}</td>
+                
+                <td style="white-space: pre-wrap;">{{ meal['ingredients'] }}</td>
+
+                <td>
+                    {% if meal['image_path'] %}
+                        <img src="{{ url_for('static', filename=meal['image_path'].replace('static/', '')) }}" alt="食事の写真" width="200">
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5">まだ食事の記録がありません。</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

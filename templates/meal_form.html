@@ -7,27 +7,30 @@
 </head>
 <body>
     <h1>食事を記録する</h1>
-    <form method="POST" enctype="multipart/form-data">
-        <label for="data">日付:</label> 
-        <input type="date" name="date" required><br>
-        <label for ="time"> 時間帯: </label>
-        <select name ="time" required>
-            <option value ="朝">朝</option>
-            <option value ="昼">昼</option>
-            <option value ="晩">晩</option>
-            <option value ="間食">間食</option>
-        </select><br>
+     <form action="{{ url_for('add_meal') }}" method="post" enctype="multipart/form-data">
 
-        <label for="meal">食べたもの:</label>
-        <input type ="text" name="meal" required><br>
+        <label for="date">日付:</label><br>
+        <input type="date" id="date" name="date" required><br><br>
 
-        <label for="meal">使用した食材（任意）:</label>
-        <input type ="text" name="ingredients"><br>
+        <label for="time_slot">時間帯:</label><br>
+        <select id="time_slot" name="time_slot" required>
+            <option value="朝食">朝食</option>
+            <option value="昼食">昼食</option>
+            <option value="夕食">夕食</option>
+            <option value="間食">間食</option>
+        </select><br><br>
 
-        <label for="meal">写真</label>
-        <input type ="file" name="photo"><br>
+        <label for="content">食べたもの:</label><br>
+        <textarea id="content" name="content" rows="3" required></textarea><br><br>
 
-        <input type ="submit" value="記録する">
+        <label for="ingredients">食材（任意）:</label><br>
+        <textarea id="ingredients" name="ingredients" rows="3"></textarea><br><br>
+
+        <label for="image">写真（任意）:</label><br>
+        <input type="file" id="image" name="image" accept="image/*"><br><br>
+
+        <button type="submit">記録する</button>
     </form>
+    <a href="{{ url_for('index') }}">トップに戻る</a>
 </body>
 </html>

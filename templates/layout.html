@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Diet App{% endblock %}</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; }
+        nav { background-color: #eee; padding: 1em; }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="{{ url_for('index') }}">トップ</a> |
+            <a href="{{ url_for('weight_page') }}">体重記録</a> |
+            <a href="{{ url_for('meal_page') }}">食事記録</a> |
+            <a href="#">トレーニング記録</a>
+        </nav>
+    </header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>
