@@ -1,0 +1,66 @@
+{% extends 'layout.html' %}
+
+{% block title %}トレーニング記録 - Diet App{% endblock %}
+
+{% block content %}
+    <h1>トレーニング記録</h1>
+
+    <section>
+        <h2>今日のトレーニングを記録する</h2>
+        <form action="{{ url_for('training_page') }}" method="post">
+            <p>
+                <label for="date">日付:</label><br>
+                <input type="date" id="date" name="date" required>
+            </p>
+            <p>
+                <label for="event">種目名:</label><br>
+                <input type="text" id="event" name="event" placeholder="例: ベンチプレス" required>
+            </p>
+            <p>
+                <label for="part">部位:</label><br>
+                <input type="text" id="part" name="part" placeholder="例: 胸、背中、脚" required>
+            </p>
+            <p>
+                <label for="reps">Rep数:</label><br>
+                <input type="number" id="reps" name="reps" required>
+            </p>
+            <p>
+                <label for="sets">セット数:</label><br>
+                <input type="number" id="sets" name="sets" required>
+            </p>
+            <button type="submit">記録する</button>
+        </form>
+    </section>
+
+    <hr>
+
+    <section>
+        <h2>トレーニング履歴</h2>
+        <table border="1" style="width:100%;">
+            <thead>
+                <tr>
+                    <th>日付</th>
+                    <th>種目名</th>
+                    <th>部位</th>
+                    <th>Reps</th>
+                    <th>Sets</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for training in trainings %}
+                <tr>
+                    <td>{{ training['date'] }}</td>
+                    <td>{{ training['event'] }}</td>
+                    <td>{{ training['part'] }}</td>
+                    <td>{{ training['reps'] }}</td>
+                    <td>{{ training['sets'] }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5">まだトレーニングの記録がありません。</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+{% endblock %}

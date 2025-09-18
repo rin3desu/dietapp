@@ -132,6 +132,36 @@ def add_meal():
     return redirect(url_for('meal_page'))
 
 
+# トレーニング記録ページ（データの表示と追加）
+@app.route('/training', methods=['GET', 'POST'])
+def training_page():
+    """トレーニングの記録と履歴の表示を行います。"""
+    db = get_db()
+    
+    # [POST] フォームからデータが送信された場合の処理
+    if request.method == 'POST':
+        date = request.form.get("date")
+        event = request.form.get("event")
+        part = request.form.get("part")
+        reps = request.form.get("reps")
+        sets = request.form.get("sets")
+        
+        # 簡単なバリデーション
+        if date and event and part and reps and sets:
+            db.execute(
+                'INSERT INTO trainings (date, event, part, reps, sets) VALUES (?, ?, ?, ?, ?)',
+                (date, event, part, int(reps), int(sets))
+            )
+            db.commit()
+        # 記録後は、同じトレーニングページにリダイレクトして結果を表示する
+        return redirect(url_for('training_page'))
+
+    # [GET] ページを通常表示する場合の処理
+    # 履歴表示用のデータを取得
+    trainings = db.execute('SELECT * FROM trainings ORDER BY date DESC, id DESC').fetchall()
+    
+    return render_template('training.html', trainings=trainings)
+
 # --- アプリケーションの実行 ---
 if __name__ == "__main__":
     app.run(debug=True)
