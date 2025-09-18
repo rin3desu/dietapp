@@ -1,6 +1,7 @@
 -- schema.sql
 DROP TABLE IF EXISTS weights;
 DROP TABLE IF EXISTS meals;
+DROP TABLE IF EXISTS trainings;
 
 CREATE TABLE weights (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -16,3 +17,13 @@ CREATE TABLE meals (
   ingredients TEXT,
   image_path TEXT
 );
+
+CREATE TABLE trainings(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  data TEXT NOT NULL,
+  event TEXT NOT NULL ,
+  part TEXT NOT NULL,
+  reps INTEGER NOT NULL,
+  sets INTEGER NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
