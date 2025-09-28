@@ -1,57 +1,45 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Diet App{% endblock %}</title>
+{% extends 'layout.html' %}
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    
-</head>
-<body>
-    <header class="main-header">
-        <a href="{{ url_for('index') }}" class="site-title">Diet App</a>
-        
-        <button class="hamburger-menu">
-            <span class="bar"></span>
-            <span class="bar"></span>
-            <span class="bar"></span>
-        </button>
-    </header>
+{% block title %}食事記録フォーム - Diet App{% endblock %}
 
-    <nav class="slide-nav">
-        <ul>
-            <li><a href="{{ url_for('weight_page') }}">体重記録</a></li>
-            <li><a href="{{ url_for('meal_page') }}">食事記録</a></li>
-            <li><a href="{{ url_for('training_page') }}">トレーニング記録</a></li>
-        </ul>
-    </nav>
-    
-    <h1>食事を記録する</h1>
-     <form action="{{ url_for('add_meal') }}" method="post" enctype="multipart/form-data">
+{% block body_attributes %}
+    class="page-background" style="background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1780');"
+{% endblock %}
 
-        <label for="date">日付:</label><br>
-        <input type="date" id="date" name="date" required><br><br>
+{% block content %}
+<div class="content-wrapper">
+    <h1>食事記録を追加</h1>
 
-        <label for="time_slot">時間帯:</label><br>
-        <select id="time_slot" name="time_slot" required>
-            <option value="朝食">朝食</option>
-            <option value="昼食">昼食</option>
-            <option value="夕食">夕食</option>
-            <option value="間食">間食</option>
-        </select><br><br>
-
-        <label for="content">食べたもの:</label><br>
-        <textarea id="content" name="content" rows="3" required></textarea><br><br>
-
-        <label for="ingredients">食材（任意）:</label><br>
-        <textarea id="ingredients" name="ingredients" rows="3"></textarea><br><br>
-
-        <label for="image">写真（任意）:</label><br>
-        <input type="file" id="image" name="image" accept="image/*"><br><br>
+    <form action="{{ url_for('add_meal') }}" method="post" enctype="multipart/form-data">
+        <p>
+            <label for="date">日付:</label><br>
+            <input type="date" id="date" name="date" required>
+        </p>
+        <p>
+            <label for="time_slot">時間帯:</label><br>
+            <select id="time_slot" name="time_slot" required>
+                <option value="">--選択してください--</option>
+                <option value="朝食">朝食</option>
+                <option value="昼食">昼食</option>
+                <option value="夕食">夕食</option>
+                <option value="間食">間食</option>
+            </select>
+        </p>
+        <p>
+            <label for="content">食べたもの:</label><br>
+            <textarea id="content" name="content" rows="3" required></textarea>
+        </p>
+        <p>
+            <label for="ingredients">食材（任意）:</label><br>
+            <textarea id="ingredients" name="ingredients" rows="3"></textarea>
+        </p>
+        <p>
+            <label for="image">写真（任意）:</label><br>
+            <input type="file" id="image" name="image" accept="image/*">
+        </p>
 
         <button type="submit">記録する</button>
+        <a href="{{ url_for('meal_page') }}" style="margin-left: 10px;">戻る</a>
     </form>
-    <a href="{{ url_for('index') }}">トップに戻る</a>
-</body>
-</html>
+</div>
+{% endblock %}
