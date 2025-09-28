@@ -1,6 +1,19 @@
-# Created by venv; see https://docs.python.org/3/library/venv.html
-venv/
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
-*.db
-.env
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+.venv/
+
+# Databases
+*.sqlite3
+diet.db
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Windows Executable
+sqlite3.exe

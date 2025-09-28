@@ -222,4 +222,4 @@ def training_page():
     return render_template('training.html', sessions=sessions_with_sets)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)
