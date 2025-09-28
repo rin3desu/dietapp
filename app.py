@@ -83,9 +83,25 @@ def weight_page():
         db.commit()
         flash('体重を記録しました!')
         return redirect(url_for('weight_page'))
-
-    # 【修正点3】重複していたDBからのデータ取得を整理
-    weight_records = db.execute('SELECT date, weight FROM weights ORDER BY date DESC').fetchall()
+    #ここから体重の前日比を表示
+    #1. 日付順（古い順）にデータを取得
+    weight_records_asc = db.execute('SELECT date, weight FROM weights ORDER BY date ASC').fetchall()
+    
+    #2. 前日比を計算して新しいリストを作成
+    records_with_diff = []
+    for i, record in enumerate(weight_records_asc):
+        record_dict = dict(record)
+        if i > 0:
+            previous_record = weight_records_asc[i-1]
+            difference = record['weight'] - previous_record['weight']
+            record_dict['difference'] = difference
+        else:
+            record_dict['difference'] = None
+        
+        records_with_diff.append(record_dict)
+        
+    records_with_diff.reverse()
+    
     graph_data = db.execute(
         'SELECT STRFTIME("%Y-%m-%d", date) as day, MIN(weight) as min_weight '
         'FROM weights GROUP BY day ORDER BY day'
@@ -94,8 +110,10 @@ def weight_page():
     dates = [row['day'] for row in graph_data]
     weights = [row['min_weight'] for row in graph_data]
     
-    return render_template('weight.html', records=weight_records, dates=dates, weights=weights)
-
+    # テンプレートには前日比計算済みのリストを渡す
+    return render_template('weight.html', records=records_with_diff, dates=dates, weights=weights)
+    
+    
 
 @app.route('/meal')
 def meal_page():
