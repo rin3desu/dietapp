@@ -2,33 +2,53 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Diet App{% endblock %}</title>
-    <style>
-        body { font-family: sans-serif; margin: 2em; }
-        nav { background-color: #eee; padding: 1em; }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
-    <header>
-        <nav>
-            <a href="{{ url_for('index') }}">トップ</a> |
-            <a href="{{ url_for('weight_page') }}">体重記録</a> |
-            <a href="{{ url_for('meal_page') }}">食事記録</a> |
-            <a href="{{ url_for('training_page') }}">トレーニング記録</a>
-        </nav>
+<body {% block body_attributes %}{% endblock %}>
+
+    <header class="main-header">
+        <a href="{{ url_for('index') }}" class="site-title">Diet App</a>
+        
+        <button class="hamburger-menu">
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+        </button>
     </header>
+
+    <nav class="slide-nav">
+        <ul>
+            <li><a href="{{ url_for('weight_page') }}">体重記録</a></li>
+            <li><a href="{{ url_for('meal_page') }}">食事記録</a></li>
+            <li><a href="{{ url_for('training_page') }}">トレーニング記録</a></li>
+        </ul>
+    </nav>
 
     <main>
         {% with messages = get_flashed_messages() %}
             {% if messages %}
-                <ul class="flashes" style="list-style-type: none; padding: 0;">
+                <ul class="flashes" style="list-style-type: none; padding: 0; max-width: 900px; margin: 1em auto;">
                 {% for message in messages %}
-                    <li style="background-color: #ffdddd; border: 1px solid #fbc4c4; padding: 10px; margin-bottom: 10px;">{{ message }}</li>
+                    <li style="background-color: #ffdddd; border: 1px solid #fbc4c4; padding: 10px; margin-bottom: 10px; border-radius: 5px;">{{ message }}</li>
                 {% endfor %}
                 </ul>
             {% endif %}
         {% endwith %}
+        
         {% block content %}{% endblock %}
     </main>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const hamburger = document.querySelector('.hamburger-menu');
+            const nav = document.querySelector('.slide-nav');
+
+            hamburger.addEventListener('click', function() {
+                nav.classList.toggle('open');
+            });
+        });
+    </script>
 </body>
 </html>

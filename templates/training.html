@@ -1,8 +1,12 @@
 {% extends 'layout.html' %}
-
 {% block title %}トレーニング記録 - Diet App{% endblock %}
 
+{% block body_attributes %}
+    class="page-background" style="background-image: url('https://images.unsplash.com/photo-1599058917212-d750089bc07e?q=80&w=2069');"
+{% endblock %}
+
 {% block content %}
+<div class="content-wrapper">
     <h1>トレーニング記録</h1>
 
     <section>
@@ -35,8 +39,27 @@
     <hr>
 
     <section>
+        <h2>履歴を絞り込む</h2>
+        <form action="{{ url_for('training_page')}}" method="get">
+            <label for ="filter_part">部位で絞り込む: </label>
+            <select id="filter_part" name="filter_part">
+                <option value="">すべての部位</option>
+                {% for part in distinct_parts %}
+                    <option value="{{ part['part'] }}" {% if part['part'] == current_filter %}selected{% endif %}>
+                        {{ part['part'] }}
+                    </option>
+                {% endfor %}
+            </select>
+            <button type="submit">絞り込む</button>
+            <a href="{{ url_for('training_page') }}">クリア</a>
+        </form>
+    </section>
+
+    <hr>
+
+    <section>
         <h2>トレーニング履歴</h2>
-        <table border="1" style="width:100%;">
+        <table class="data-table">
             <thead>
                 <tr>
                     <th>日付</th>
@@ -63,4 +86,5 @@
             </tbody>
         </table>
     </section>
+</div>
 {% endblock %}

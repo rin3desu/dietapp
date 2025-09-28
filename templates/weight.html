@@ -2,38 +2,36 @@
 
 {% block title %}体重記録 - Diet App{% endblock %}
 
+{% block body_attributes%}
+    class = "page-background" style="background-image: url('https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=2120');"
+{% endblock %}
+
 {% block content %}
+<div class="content-wrapper">
     <h1>体重記録</h1>
 
     <section>
         <h2>今日の体重を記録する</h2>
-        <form action="{{ url_for('weight_page') }}" method="post">
-            <label for="date">日付:</label>
-            <input type="date" id="date" name="date" required>
-            
-            <label for="weight">体重 (kg):</label>
-            <input type="number" step="0.1" id="weight" name="weight" required>
-            
-            <button type="submit">記録する</button>
-        </form>
+        ...
     </section>
 
     <hr>
 
     <section>
         <h2>体重推移グラフ</h2>
-        <canvas id="weightChart" width="400" height="200"></canvas>
+        ...
     </section>
 
     <hr>
 
     <section>
         <h2>体重履歴</h2>
-        <table border="1" style="width:100%;">
+        <table class="data-table">
             <thead>
                 <tr>
                     <th>記録日時</th>
                     <th>体重 (kg)</th>
+                    <th>前日比</th>
                 </tr>
             </thead>
             <tbody>
@@ -41,42 +39,53 @@
                 <tr>
                     <td>{{ record['date'] }}</td>
                     <td>{{ record['weight'] }}</td>
+                    <td>
+                        {% if record.difference is not none %}
+                            {% set diff_class = 'diff-plus' if record.difference > 0 else 'diff-minus' %}
+                            <span class="{{ diff_class }}">
+                                {{ '%+.1f'|format(record.difference) }} kg
+                            </span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="2">まだ体重の記録がありません。</td>
+                    <td colspan="3">まだ体重の記録がありません。</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </section>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <script>
-        // Flaskから渡されたデータをJavaScriptの変数に変換
-        const labels = {{ dates | tojson }};
-        const data = {{ weights | tojson }};
+<script>
+    // Flaskから渡されたデータをJavaScriptの変数に変換
+    const labels = {{ dates | tojson }};
+    const data = {{ weights | tojson }};
 
-        const ctx = document.getElementById('weightChart').getContext('2d');
-        const weightChart = new Chart(ctx, {
-            type: 'line', // 折れ線グラフ
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: '体重 (kg)',
-                    data: data,
-                    borderColor: 'rgb(75, 192, 192)',
-                    tension: 0.1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: false // Y軸の開始を0にしない
-                    }
+    const ctx = document.getElementById('weightChart').getContext('2d');
+    const weightChart = new Chart(ctx, {
+        type: 'line', // 折れ線グラフ
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '体重 (kg)',
+                data: data,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: false // Y軸の開始を0にしない
                 }
             }
-        });
-    </script>
+        }
+    });
+</script>
 {% endblock %}

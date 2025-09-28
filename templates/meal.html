@@ -1,8 +1,12 @@
 {% extends 'layout.html' %}
 
 {% block title %}食事記録 - Diet App{% endblock %}
+{% block body_attributes %}
+    class="page-background" style="background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1780');"
+{% endblock %}
 
 {% block content %}
+<div class="content-wrapper">
     <h1>食事記録</h1>
 
     <a href="{{ url_for('meal_form') }}">
@@ -12,7 +16,9 @@
     <hr>
 
     <h2>食事履歴</h2>
-    <table border="1" style="width:100%; margin-top: 1em;">
+    
+    <!-- ↓↓↓ このテーブルタグを修正 ↓↓↓ -->
+    <table class="data-table">
         <thead>
             <tr>
                 <th style="width: 10%;">日付</th>
@@ -27,14 +33,11 @@
             <tr>
                 <td>{{ meal['date'] }}</td>
                 <td>{{ meal['time_slot'] }}</td>
-                
                 <td style="white-space: pre-wrap;">{{ meal['content'] }}</td>
-                
                 <td style="white-space: pre-wrap;">{{ meal['ingredients'] }}</td>
-
                 <td>
                     {% if meal['image_path'] %}
-                        <img src="{{ url_for('static', filename=meal['image_path'].replace('static/', '')) }}" alt="食事の写真" width="200">
+                        <img src="{{ url_for('static', filename=meal['image_path'].replace('static/', '')) }}" alt="食事の写真" width="200" style="border-radius: 5px;">
                     {% endif %}
                 </td>
             </tr>
@@ -45,4 +48,5 @@
             {% endfor %}
         </tbody>
     </table>
+</div>
 {% endblock %}

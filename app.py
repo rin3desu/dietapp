@@ -171,7 +171,6 @@ def training_page():
         reps_str = request.form.get("reps")
         sets_str = request.form.get("sets")
         
-        # 【修正点2】トレーニング記録にも詳細なバリデーションを追加
         if not all([date, event, part, reps_str, sets_str]):
             flash('すべての項目を入力してください。')
             return redirect(url_for('training_page'))
@@ -190,6 +189,8 @@ def training_page():
         db.commit()
         flash('トレーニングを記録しました！')
         return redirect(url_for('training_page'))
+    
+    filter_part = request.args.get('filter_part', '')
 
     trainings = db.execute('SELECT * FROM trainings ORDER BY date DESC, id DESC').fetchall()
     return render_template('training.html', trainings=trainings)
