@@ -161,40 +161,65 @@ def add_meal():
 
 @app.route('/training', methods=['GET', 'POST'])
 def training_page():
-    """トレーニングの記録と履歴の表示を行います。"""
     db = get_db()
     
+    # [POST] フォームからデータが送信された場合の処理
     if request.method == 'POST':
         date = request.form.get("date")
-        event = request.form.get("event")
         part = request.form.get("part")
-        reps_str = request.form.get("reps")
-        sets_str = request.form.get("sets")
-        
-        if not all([date, event, part, reps_str, sets_str]):
-            flash('すべての項目を入力してください。')
+        event = request.form.get("event")
+
+        # バリデーション
+        if not all([date, part, event]):
+            flash('日付、部位、種名は必須です。')
             return redirect(url_for('training_page'))
 
-        try:
-            reps = int(reps_str)
-            sets = int(sets_str)
-        except ValueError:
-            flash('Rep数とセット数には半角数字を入力してください。')
-            return redirect(url_for('training_page'))
-        
-        db.execute(
-            'INSERT INTO trainings (date, event, part, reps, sets) VALUES (?, ?, ?, ?, ?)',
-            (date, event, part, reps, sets)
+        # 1. まず親となるセッション情報を保存
+        cursor = db.execute(
+            'INSERT INTO training_sessions (date, part, event) VALUES (?, ?, ?)',
+            (date, part, event)
         )
+        db.commit()
+        session_id = cursor.lastrowid # 今保存したセッションのIDを取得
+
+        # 2. セット情報をループで処理して保存
+        set_number = 1
+        while True:
+            weight = request.form.get(f'weight_{set_number}')
+            reps = request.form.get(f'reps_{set_number}')
+            
+            # weight_{n} と reps_{n} が両方存在する場合のみ処理
+            if weight is not None and reps is not None:
+                if weight and reps: # 空文字でないことを確認
+                    db.execute(
+                        'INSERT INTO training_sets (session_id, set_number, weight, reps) VALUES (?, ?, ?, ?)',
+                        (session_id, set_number, float(weight), int(reps))
+                    )
+                set_number += 1
+            else:
+                # それ以上セットがないのでループを抜ける
+                break
+        
         db.commit()
         flash('トレーニングを記録しました！')
         return redirect(url_for('training_page'))
+
+    # [GET] ページを通常表示する場合の処理
+    # 記録された全セッションを取得
+    sessions = db.execute('SELECT * FROM training_sessions ORDER BY date DESC, id DESC').fetchall()
     
-    filter_part = request.args.get('filter_part', '')
-
-    trainings = db.execute('SELECT * FROM trainings ORDER BY date DESC, id DESC').fetchall()
-    return render_template('training.html', trainings=trainings)
-
+    # 各セッションに、紐づくセット情報を追加する
+    sessions_with_sets = []
+    for session in sessions:
+        session_dict = dict(session) # 辞書に変換
+        sets = db.execute(
+            'SELECT * FROM training_sets WHERE session_id = ? ORDER BY set_number ASC',
+            (session['id'],)
+        ).fetchall()
+        session_dict['sets'] = sets # 辞書にセット情報を追加
+        sessions_with_sets.append(session_dict)
+    
+    return render_template('training.html', sessions=sessions_with_sets)
 
 if __name__ == "__main__":
     app.run(debug=True)

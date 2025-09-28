@@ -17,41 +17,36 @@
                 <input type="date" id="date" name="date" required>
             </p>
             <p>
-                <label for="event">種目名:</label><br>
-                <input type="text" id="event" name="event" placeholder="例: ベンチプレス" required>
-            </p>
-            <p>
                 <label for="part">部位:</label><br>
-                <input type="text" id="part" name="part" placeholder="例: 胸、背中、脚" required>
+                <select id="part" name="part" required>
+                    <option value="">部位を選択してください</option>
+                    <option value="胸">胸</option>
+                    <option value="背中">背中</option>
+                    <option value="脚">脚</option>
+                    <option value="肩">肩</option>
+                    <option value="腕">腕</option>
+                </select>
             </p>
             <p>
-                <label for="reps">Rep数:</label><br>
-                <input type="number" id="reps" name="reps" required>
+                <label for="event">種目名:</label><br>
+                <select id="event" name="event" required>
+                    <option value="">---</option>
+                    </select>
             </p>
-            <p>
-                <label for="sets">セット数:</label><br>
-                <input type="number" id="sets" name="sets" required>
-            </p>
-            <button type="submit">記録する</button>
-        </form>
-    </section>
+            
+            <hr>
+            <h3>セットごとの記録</h3>
+            <div id="sets-container">
+                <div class="set-row">
+                    <span>セット1:</span>
+                    <input type="number" name="weight_1" placeholder="負荷(kg)" step="0.5" required> kg /
+                    <input type="number" name="reps_1" placeholder="回数" required> reps
+                </div>
+            </div>
+            <button type="button" id="add-set-btn">セットを追加</button>
+            <hr>
 
-    <hr>
-
-    <section>
-        <h2>履歴を絞り込む</h2>
-        <form action="{{ url_for('training_page')}}" method="get">
-            <label for ="filter_part">部位で絞り込む: </label>
-            <select id="filter_part" name="filter_part">
-                <option value="">すべての部位</option>
-                {% for part in distinct_parts %}
-                    <option value="{{ part['part'] }}" {% if part['part'] == current_filter %}selected{% endif %}>
-                        {{ part['part'] }}
-                    </option>
-                {% endfor %}
-            </select>
-            <button type="submit">絞り込む</button>
-            <a href="{{ url_for('training_page') }}">クリア</a>
+            <button type="submit">この種目を記録する</button>
         </form>
     </section>
 
@@ -59,32 +54,81 @@
 
     <section>
         <h2>トレーニング履歴</h2>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>日付</th>
-                    <th>種目名</th>
-                    <th>部位</th>
-                    <th>Reps</th>
-                    <th>Sets</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for training in trainings %}
-                <tr>
-                    <td>{{ training['date'] }}</td>
-                    <td>{{ training['event'] }}</td>
-                    <td>{{ training['part'] }}</td>
-                    <td>{{ training['reps'] }}</td>
-                    <td>{{ training['sets'] }}</td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="5">まだトレーニングの記録がありません。</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        
+        {# ↓↓↓ この行に並び替えの指示を追加します ↓↓↓ #}
+        {% for session_group in sessions | groupby('date') | sort(reverse=True, attribute='grouper') %}
+            <h3>{{ session_group.grouper }}</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>部位</th>
+                        <th>種目名</th>
+                        <th>セット詳細 (負荷 x 回数)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in session_group.list %}
+                    <tr>
+                        <td>{{ item.part }}</td>
+                        <td>{{ item.event }}</td>
+                        <td>
+                            {% for set in item.sets %}
+                                <span>{{ set.weight }}kg x {{ set.reps }}reps</span><br>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>まだトレーニングの記録がありません。</p>
+        {% endfor %}
     </section>
 </div>
+
+<script>
+    // 部位と種目のデータ
+    const exercises = {
+        '胸': ['ベンチプレス', 'ダンベルフライ', 'インクラインプレス', '腕立て伏せ'],
+        '背中': ['懸垂', 'デッドリフト', 'ベントオーバーロウ', 'ラットプルダウン'],
+        '脚': ['スクワット', 'レッグプレス', 'ランジ', 'レッグカール'],
+        '肩': ['ショルダープレス', 'サイドレイズ', 'フロントレイズ'],
+        '腕': ['アームカール', 'トライセプスキックバック', 'ハンマーカール']
+    };
+
+    const partSelect = document.getElementById('part');
+    const eventSelect = document.getElementById('event');
+    const setsContainer = document.getElementById('sets-container');
+    const addSetBtn = document.getElementById('add-set-btn');
+    let setCount = 1;
+
+    // 部位が選択されたら、種目の選択肢を更新する
+    partSelect.addEventListener('change', function() {
+        const selectedPart = this.value;
+        // 一旦種目リストを空にする
+        eventSelect.innerHTML = '<option value="">種目を選択してください</option>';
+        
+        if (selectedPart && exercises[selectedPart]) {
+            exercises[selectedPart].forEach(function(exercise) {
+                const option = document.createElement('option');
+                option.value = exercise;
+                option.textContent = exercise;
+                eventSelect.appendChild(option);
+            });
+        }
+    });
+
+    // 「セットを追加」ボタンが押されたら、入力欄を増やす
+    addSetBtn.addEventListener('click', function() {
+        setCount++;
+        const newSetRow = document.createElement('div');
+        newSetRow.classList.add('set-row');
+        newSetRow.innerHTML = `
+            <span>セット${setCount}:</span>
+            <input type="number" name="weight_${setCount}" placeholder="負荷(kg)" step="0.5" required> kg /
+            <input type="number" name="reps_${setCount}" placeholder="回数" required> reps
+        `;
+        setsContainer.appendChild(newSetRow);
+    });
+</script>
 {% endblock %}
