@@ -118,3 +118,40 @@ main {
     z-index: 2; /* 文字をフィルターの上に表示 */
     text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
 }
+
+.page-background{
+    background-size: cover ;
+    background-position: center;
+    background-attachment: fixed; 
+    padding-top: 60px;
+}
+
+.content-wrapper {
+    max-width: 900px;
+    margin: 2em auto;
+    padding: 20px 30px;
+
+    background-color: rgba(255,255,255,0.92);
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+/* テーブルのデザインを少し整える */
+.data-table {
+    width: 100%;
+    border-collapse: collapse; /* セルの境界線を結合 */
+    margin-top: 1.5em;
+}
+.data-table th, .data-table td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: left;
+}
+.data-table th {
+    background-color: #f2f2f2;
+}
+.data-table tr:nth-child(even){background-color: #f9f9f9;} /* 偶数行の色 */
+
+/* 体重の前日比の文字色 */
+.diff-plus { color: #d9534f; } /* 赤色 (増加) */
+.diff-minus { color: #5cb85c; } /* 緑色 (減少) */
