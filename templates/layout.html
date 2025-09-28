@@ -19,6 +19,15 @@
     </header>
 
     <main>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <ul class="flashes" style="list-style-type: none; padding: 0;">
+                {% for message in messages %}
+                    <li style="background-color: #ffdddd; border: 1px solid #fbc4c4; padding: 10px; margin-bottom: 10px;">{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
         {% block content %}{% endblock %}
     </main>
 </body>

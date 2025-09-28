@@ -2,44 +2,54 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title> Diet APP - TopPage</title>
-    <style>
-        .banner-container {
-            display: flex;
-            gap: 20px;
-            padding: 20px;
-        }
-        .banner {
-            border: 1px solid #ccc;
-            padding: 40px 20px;
-            text-align: center;
-            text-decoration: none;
-            color: black;
-            border-radius: 8px;
-            transition: background-color 0.3s;
-        }
-        .banner:hover {
-            background-color: #f0f0f0;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Diet App{% endblock %}</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
 </head>
 <body>
-    <h1> ダイエット記録アプリ </h1>
-    <p>記録したい項目を選んでください </p>
 
-    <div class="banner-container">
-        <a href="{{ url_for('weight_page') }}" class="banner">
-            <h2>体重記録</h2>
-            <p>体重の記録とグラフの確認</p>
-        </a>
-        <a href="{{ url_for('meal_page') }}" class="banner">
-            <h2>食事記録</h2>
-            <p>毎日の食事を写真付きで記録</p>
-        </a>
-        <a href="{{ url_for('training_page') }}" class="banner"> 
-            <h2>トレーニング記録</h2>
-            <p>トレーニング内容を記録</p>
-        </a>
-    </div>
+    <header class="main-header">
+        <a href="{{ url_for('index') }}" class="site-title">Diet App</a>
+        
+        <button class="hamburger-menu">
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+        </button>
+    </header>
+
+    <nav class="slide-nav">
+        <ul>
+            <li><a href="{{ url_for('weight_page') }}">体重記録</a></li>
+            <li><a href="{{ url_for('meal_page') }}">食事記録</a></li>
+            <li><a href="{{ url_for('training_page') }}">トレーニング記録</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <div class="banner-container">
+            <a href="#" class="info-banner" style="background-image: url('https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=2069');">
+                <h2>正しいスクワットの方法</h2>
+            </a>
+
+            <a href="#" class="info-banner" style="background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1780');">
+                <h2>高タンパク質レシピ集</h2>
+            </a>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const hamburger = document.querySelector('.hamburger-menu');
+            const nav = document.querySelector('.slide-nav');
+
+            hamburger.addEventListener('click', function() {
+                nav.classList.toggle('open');
+            });
+        });
+    </script>
+
 </body>
 </html>

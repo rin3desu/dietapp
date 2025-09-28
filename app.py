@@ -2,28 +2,26 @@ import os
 import sqlite3
 import click
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, g
+from flask import Flask, render_template, request, redirect, url_for, g, flash
 from werkzeug.utils import secure_filename
 
 # --- アプリケーションの初期化 ---
 app = Flask(__name__)
+app.secret_key = 'Kinchan_3110'
 app.config['DATABASE'] = 'diet.db'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 
 # --- データベース接続の管理 ---
 
-# リクエストごとにDB接続を確立し、gオブジェクトに格納する
 def get_db():
     if 'db' not in g:
         g.db = sqlite3.connect(
             app.config['DATABASE'],
             detect_types=sqlite3.PARSE_DECLTYPES
         )
-        # カラム名でデータにアクセスできるようにする
         g.db.row_factory = sqlite3.Row
     return g.db
 
-# リクエスト終了時にDB接続を自動的に閉じる
 @app.teardown_appcontext
 def close_db(e=None):
     db = g.pop('db', None)
@@ -32,14 +30,11 @@ def close_db(e=None):
 
 # --- データベース初期化コマンド ---
 
-# schema.sqlファイルからスキーマを読み込みDBを初期化する
 def init_db():
     db = get_db()
-    # schema.sqlファイルを開いて実行する
     with app.open_resource('schema.sql') as f:
         db.executescript(f.read().decode('utf8'))
 
-# "flask init-db" というコマンドをターミナルで実行できるようにする
 @app.cli.command('init-db')
 def init_db_command():
     """既存のデータをクリアし、新しいテーブルを作成します。"""
@@ -49,39 +44,48 @@ def init_db_command():
 
 # --- ルート（URLと関数の対応付け） ---
 
-# 1. トップページ（玄関ページ）
 @app.route('/')
 def index():
     """アプリのトップページを表示します。"""
     return render_template('index.html')
 
-# 2. 体重記録ページ（データの表示と追加）
+
 @app.route('/weight', methods=['GET', 'POST'])
 def weight_page():
     """体重の記録と履歴・グラフの表示を行います。"""
     db = get_db()
     
-    # [POST] フォームからデータが送信された場合の処理
     if request.method == 'POST':
-        weight = request.form.get("weight")
-        date = request.form.get("date")
+        weight_str = request.form.get("weight")
+        date_str = request.form.get("date")
         
-        # 簡単なバリデーション
-        if weight and date:
-            full_datetime = f"{date} {datetime.now().strftime('%H:%M:%S')}"
-            db.execute(
-                'INSERT INTO weights (date, weight) VALUES (?, ?)',
-                (full_datetime, float(weight))
-            )
-            db.commit()
-        # 記録後は、同じ体重ページにリダイレクトして結果を表示する
+        if not date_str:
+            flash('日付を入力してください')
+            return redirect(url_for('weight_page'))
+        
+        if not weight_str:
+            flash('体重を入力してください')
+            return redirect(url_for('weight_page'))
+        
+        try:
+            weight = float(weight_str)
+        except ValueError:
+            flash('体重には半角数字を入力してください')
+            return redirect(url_for('weight_page'))
+        
+        # 【修正点1】f-string (f"...") を使うように修正
+        full_datetime = f"{date_str} {datetime.now().strftime('%H:%M:%S')}"
+        
+        db.execute(
+            'INSERT INTO weights (date, weight) VALUES (?, ?)',
+            (full_datetime, weight)
+        )
+        db.commit()
+        flash('体重を記録しました!')
         return redirect(url_for('weight_page'))
 
-    # [GET] ページを通常表示する場合の処理
-    # 履歴表示用のデータを取得
+    # 【修正点3】重複していたDBからのデータ取得を整理
     weight_records = db.execute('SELECT date, weight FROM weights ORDER BY date DESC').fetchall()
-    
-    # グラフ表示用のデータを取得
     graph_data = db.execute(
         'SELECT STRFTIME("%Y-%m-%d", date) as day, MIN(weight) as min_weight '
         'FROM weights GROUP BY day ORDER BY day'
@@ -92,7 +96,7 @@ def weight_page():
     
     return render_template('weight.html', records=weight_records, dates=dates, weights=weights)
 
-# 3. 食事記録ページ（一覧表示）
+
 @app.route('/meal')
 def meal_page():
     """食事記録の一覧を表示します。"""
@@ -100,21 +104,26 @@ def meal_page():
     meals = db.execute('SELECT * FROM meals ORDER BY date DESC, id DESC').fetchall()
     return render_template('meal.html', meals=meals)
 
-# 4. 食事記録フォーム表示
+
 @app.route('/meal_form')
 def meal_form():
     """食事を記録するためのフォームページを表示します。"""
     return render_template('meal_form.html')
 
-# 5. 食事データの追加処理
+
 @app.route('/add_meal', methods=['POST'])
 def add_meal():
     """食事フォームから送信されたデータをDBに保存します。"""
-    date = request.form['date']
-    time_slot = request.form['time_slot']
-    content = request.form['content']
+    date = request.form.get('date')
+    time_slot = request.form.get('time_slot')
+    content = request.form.get('content')
     ingredients = request.form.get('ingredients')
     photo = request.files.get('image')
+    
+    # 【修正点2】食事記録にもバリデーションを追加
+    if not all([date, time_slot, content]):
+        flash('日付、時間帯、食べたものは必須項目です。')
+        return redirect(url_for('meal_form'))
     
     photo_path = None
     if photo and photo.filename:
@@ -128,40 +137,45 @@ def add_meal():
         (date, time_slot, content, ingredients, photo_path)
     )
     db.commit()
-    # 記録後は、食事一覧ページにリダイレクトする
+    flash('食事を記録しました！')
     return redirect(url_for('meal_page'))
 
 
-# トレーニング記録ページ（データの表示と追加）
 @app.route('/training', methods=['GET', 'POST'])
 def training_page():
     """トレーニングの記録と履歴の表示を行います。"""
     db = get_db()
     
-    # [POST] フォームからデータが送信された場合の処理
     if request.method == 'POST':
         date = request.form.get("date")
         event = request.form.get("event")
         part = request.form.get("part")
-        reps = request.form.get("reps")
-        sets = request.form.get("sets")
+        reps_str = request.form.get("reps")
+        sets_str = request.form.get("sets")
         
-        # 簡単なバリデーション
-        if date and event and part and reps and sets:
-            db.execute(
-                'INSERT INTO trainings (date, event, part, reps, sets) VALUES (?, ?, ?, ?, ?)',
-                (date, event, part, int(reps), int(sets))
-            )
-            db.commit()
-        # 記録後は、同じトレーニングページにリダイレクトして結果を表示する
+        # 【修正点2】トレーニング記録にも詳細なバリデーションを追加
+        if not all([date, event, part, reps_str, sets_str]):
+            flash('すべての項目を入力してください。')
+            return redirect(url_for('training_page'))
+
+        try:
+            reps = int(reps_str)
+            sets = int(sets_str)
+        except ValueError:
+            flash('Rep数とセット数には半角数字を入力してください。')
+            return redirect(url_for('training_page'))
+        
+        db.execute(
+            'INSERT INTO trainings (date, event, part, reps, sets) VALUES (?, ?, ?, ?, ?)',
+            (date, event, part, reps, sets)
+        )
+        db.commit()
+        flash('トレーニングを記録しました！')
         return redirect(url_for('training_page'))
 
-    # [GET] ページを通常表示する場合の処理
-    # 履歴表示用のデータを取得
     trainings = db.execute('SELECT * FROM trainings ORDER BY date DESC, id DESC').fetchall()
-    
     return render_template('training.html', trainings=trainings)
 
-# --- アプリケーションの実行 ---
+
 if __name__ == "__main__":
     app.run(debug=True)

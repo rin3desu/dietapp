@@ -1,0 +1,120 @@
+body {
+    font-family: sans-serif;
+    background-color: #f0f8ff;
+    text-align: center;
+    padding: 2em;
+}
+
+a{
+    text-decoration: none;
+    color: inherit;
+}
+
+.main-header{
+    background-color: black;
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: fixed;
+    width: 100%;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    box-sizing: border-box;
+}
+
+.site-title {
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+/* ハンバーガーメニューのボタン */
+.hamburger-menu {
+    width: 30px;
+    height: 25px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    cursor: pointer;
+    background: none;
+    border: none;
+}
+
+.hamburger-menu .bar {
+    width: 100%;
+    height: 3px;
+    background-color: white;
+    border-radius: 2px;
+}
+
+/* スライドしてくるナビゲーションメニュー */
+.slide-nav {
+    position: fixed;
+    top: 0;
+    right: -280px; /* 初期状態では画面の外に隠す */
+    width: 250px;
+    height: 100%;
+    background-color: #222;
+    color: white;
+    padding: 20px;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.5);
+    transition: right 0.3s ease-in-out;
+    z-index: 999;
+}
+.slide-nav.open {
+    right: 0; /* 'open'クラスが付くと右からスライドイン */
+}
+.slide-nav ul {
+    list-style: none;
+    padding: 60px 0 0 0;
+    margin: 0;
+}
+.slide-nav ul li {
+    padding: 15px 10px;
+    border-bottom: 1px solid #444;
+}
+.slide-nav ul li a {
+    font-size: 1.2em;
+}
+
+/* body部分（メインコンテンツ） */
+main {
+    padding-top: 60px; /* 固定ヘッダー分のスペースを確保 */
+}
+
+/* バナー */
+.banner-container {
+    padding: 20px;
+    display: grid;
+    gap: 20px;
+}
+.info-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 250px;
+    background-size: cover;
+    background-position: center;
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+    color: white;
+}
+/* バナーの背景画像の上に暗いフィルターをかける（文字を見やすくするため） */
+.info-banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 1;
+}
+.info-banner h2 {
+    font-size: 2em;
+    z-index: 2; /* 文字をフィルターの上に表示 */
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+}
