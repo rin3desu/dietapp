@@ -243,23 +243,5 @@ def training_page():
     return render_template('training.html', sessions=sessions_with_sets)
 
 # アプリの初回起動時にデータベースが存在しなければ初期化する関数
-
-# アプリの初回起動時にデータベースが存在しなければ初期化する関数
-def initialize_database():
-    db_path = app.config['DATABASE']
-    # フォルダ作成処理は削除し、ファイルの存在チェックのみに戻す
-    if not os.path.exists(db_path):
-        print(f"データベースが存在しないため、{db_path} に新規作成します。")
-        # with app.app_context() を使ってデータベース操作を行う
-        with app.app_context():
-            init_db()
-            print("データベースの初期化が完了しました。")
-    else:
-        print(f"データベースは既に存在します: {db_path}")
-
-# このファイルを直接実行した場合（ローカルでの開発時）
 if __name__ == "__main__":
-    app.run(debug=True)
-else:
-    # Renderなどの本番環境でGunicornから起動された場合
-    initialize_database()
+    app.run(debug=False)
