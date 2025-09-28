@@ -9,9 +9,15 @@ from werkzeug.utils import secure_filename
 
 # --- アプリケーションの初期化 ---
 app = Flask(__name__)
-app.secret_key = 'your_super_secret_key' # 必ず複雑なキーに変更してください
-app.config['DATABASE'] = os.path.join('/var/data', 'diet.db') # Renderの永続ディスクパス
+
+# 【修正点】secret_key を設定。これはflashやsession機能に必須です。
+app.secret_key = 'your-very-secret-key-that-no-one-can-guess'
+
+# Renderの環境変数から永続ディスクのパスを取得し、なければローカルの'instance'フォルダを使う
+data_dir = os.environ.get('RENDER_DISK_MOUNT_PATH', 'instance')
+app.config['DATABASE'] = os.path.join(data_dir, 'diet.db')
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
+
 
 # --- データベース接続の管理 ---
 def get_db():
@@ -26,20 +32,30 @@ def close_db(e=None):
     if db is not None:
         db.close()
 
+
 # --- データベース初期化コマンド ---
+
+# 【修正点】重複していたinit_db関数を1つに統合
 def init_db():
+    # データベースのディレクトリが存在することを確実にする
+    db_path = app.config['DATABASE']
+    db_dir = os.path.dirname(db_path)
+    os.makedirs(db_dir, exist_ok=True)
+
     db = get_db()
     with app.open_resource('schema.sql') as f:
         db.executescript(f.read().decode('utf8'))
 
+# 【修正点】'init-db' コマンドをFlask CLIに登録する
 @app.cli.command('init-db')
 def init_db_command():
+    """データベースをクリアし、新しいテーブルを作成します。"""
     init_db()
     click.echo('データベースの初期化が完了しました。')
 
+
 # --- ユーザー認証 ---
 
-# リクエストの前に、ログインしているユーザー情報を読み込む
 @app.before_request
 def load_logged_in_user():
     user_id = session.get('user_id')
@@ -48,7 +64,6 @@ def load_logged_in_user():
     else:
         g.user = get_db().execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
 
-# ログインが必要なページ用のデコレータ
 def login_required(view):
     @wraps(view)
     def wrapped_view(**kwargs):
@@ -58,7 +73,6 @@ def login_required(view):
         return view(**kwargs)
     return wrapped_view
 
-# ユーザー登録
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -80,7 +94,6 @@ def register():
         flash(error)
     return render_template('register.html')
 
-# ログイン
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -103,21 +116,19 @@ def login():
         flash(error)
     return render_template('login.html')
 
-# ログアウト
 @app.route('/logout')
 def logout():
     session.clear()
     flash('ログアウトしました。')
     return redirect(url_for('index'))
 
+
 # --- メイン機能 ---
 
-# トップページ
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# 体重記録ページ
 @app.route('/weight', methods=['GET', 'POST'])
 @login_required
 def weight_page():
@@ -157,7 +168,6 @@ def weight_page():
     
     return render_template('weight.html', records=records_with_diff, dates=dates, weights=weights)
 
-# 食事記録ページ
 @app.route('/meal')
 @login_required
 def meal_page():
@@ -166,18 +176,15 @@ def meal_page():
     meals = db.execute('SELECT * FROM meals WHERE user_id = ? ORDER BY date DESC, id DESC', (user_id,)).fetchall()
     return render_template('meal.html', meals=meals)
 
-# 食事記録フォーム
 @app.route('/meal_form')
 @login_required
 def meal_form():
     return render_template('meal_form.html')
 
-# 食事データ追加
 @app.route('/add_meal', methods=['POST'])
 @login_required
 def add_meal():
     user_id = g.user['id']
-    # ... (フォームデータの取得とバリデーションは省略) ...
     date = request.form.get('date')
     time_slot = request.form.get('time_slot')
     content = request.form.get('content')
@@ -199,7 +206,6 @@ def add_meal():
     flash('食事を記録しました！')
     return redirect(url_for('meal_page'))
 
-# トレーニング記録ページ
 @app.route('/training', methods=['GET', 'POST'])
 @login_required
 def training_page():
@@ -207,7 +213,6 @@ def training_page():
     db = get_db()
     
     if request.method == 'POST':
-        # ... (フォームデータ取得とバリデーションは省略) ...
         date = request.form.get("date")
         part = request.form.get("part")
         event = request.form.get("event")
@@ -242,6 +247,7 @@ def training_page():
     
     return render_template('training.html', sessions=sessions_with_sets)
 
-# アプリの初回起動時にデータベースが存在しなければ初期化する関数
+
+# --- アプリケーションの実行 ---
 if __name__ == "__main__":
     app.run(debug=False)
