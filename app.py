@@ -5,6 +5,7 @@ from datetime import datetime
 from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, g, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 
 # --- アプリケーションの初期化 ---
 app = Flask(__name__)
@@ -241,6 +242,20 @@ def training_page():
     
     return render_template('training.html', sessions=sessions_with_sets)
 
-# --- アプリケーションの実行 ---
+def initialize_database():
+    db_path = app.config['DATABASE']
+    if not os.path.exists(db_path):
+        print(f"データベースが存在しないため、{db_path} に新規作成します。")
+        with app.app_context():
+            init_db()
+            print("データベースの初期化が完了しました。")
+    else:
+        print(f"データベースは既に存在します: {db_path}")
+
+# このファイルを直接実行した場合（ローカルでの開発時）
 if __name__ == "__main__":
+    initialize_database()
     app.run(debug=True)
+else:
+    # Renderなどの本番環境でGunicornから起動された場合
+    initialize_database()
