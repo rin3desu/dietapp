@@ -4,4 +4,5 @@ set -o errexit
 
 pip install -r requirements.txt
 
-flask init-db
+# flaskコマンドをpythonモジュールとして呼び出すように変更
+python -m flask init-db
