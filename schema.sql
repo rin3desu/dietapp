@@ -48,3 +48,22 @@ CREATE TABLE training_sets (
     reps INTEGER NOT NULL,
     FOREIGN KEY (session_id) REFERENCES training_sessions (id)
 );
+
+CREATE TABLE gyms(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    latitude Real,
+    longitude Real,
+    address TEXT,
+    FOREIGN KEY (user_id) REFERENCES users (id)    
+);
+
+-- ジムにあるマシンを登録するテーブル
+CREATE TABLE machines (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gym_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    target_muscle TEXT NOT NULL, -- 胸、背中、脚など
+    FOREIGN KEY (gym_id) REFERENCES gyms (id)
+);

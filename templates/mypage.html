@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>マイページ - Diet App</title>
+    <style>
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; font-family: sans-serif; }
+        .card { border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 20px; background-color: #f9f9f9; }
+        .card h3 { margin-top: 0; border-bottom: 2px solid #333; padding-bottom: 5px; }
+        .weight-val { font-size: 24px; font-weight: bold; color: #2c3e50; }
+        ul { padding-left: 20px; }
+        .btn { display: inline-block; padding: 10px 15px; background: #3498db; color: white; text-decoration: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>{{ g.user['username'] }} さんのマイページ</h2>
+
+        <div class="card">
+            <h3>現在の体重</h3>
+            <p class="weight-val">{{ current_weight }} <span style="font-size: 16px;">kg</span></p>
+            <a href="{{ url_for('weight_page') }}" style="font-size: 14px;">体重を記録する</a>
+        </div>
+
+        <div class="card">
+            <h3>マイジム（最大2件）</h3>
+            {% if gyms %}
+                <ul style="list-style: none; padding: 0;">
+                {% for gym in gyms %}
+                    <li style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; border-bottom: 1px solid #eee;">
+                        <a href="{{ url_for('gym_detail', gym_id=gym['id']) }}" style="font-size: 18px; font-weight: bold; color: #2c3e50; text-decoration: none;">
+                            {{ gym['name'] }}
+                        </a>
+                        
+                        <form action="{{ url_for('delete_gym', gym_id=gym['id']) }}" method="POST" onsubmit="return confirm('このジムと、登録されたマシン情報もすべて削除されます。本当によろしいですか？');">
+                            <button type="submit" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                削除
+                            </li>
+                        </form>
+                    </li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p>ジムが登録されていません。</p>
+            {% endif %}
+            <a href="{{ url_for('gym_register') }}" class="btn">ジムを追加・変更する</a>
+        </div>
+
+        <div class="card">
+            <h3>トレーニング実施日</h3>
+            {% if training_dates %}
+                <ul>
+                {% for session in training_dates %}
+                    <li>{{ session['date'] }}</li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p>まだトレーニングの記録がありません。</p>
+            {% endif %}
+            <a href="{{ url_for('training_page') }}" style="font-size: 14px;">新しく記録する</a>
+        </div>
+
+        <p><a href="{{ url_for('index') }}">トップページに戻る</a></p>
+    </div>
+</body>
+</html>
