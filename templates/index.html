@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Diet App{% endblock %}</title>
-
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    
 </head>
 <body>
 
@@ -23,13 +21,29 @@
     <nav class="slide-nav">
         <ul>
             <li><a href="{{ url_for('index') }}">トップページ</a></li>
-            <li><a href="{{ url_for('weight_page') }}">体重記録</a></li>
-            <li><a href="{{ url_for('meal_page') }}">食事記録</a></li>
-            <li><a href="{{ url_for('training_page') }}">トレーニング記録</a></li>
+            
+            {% if g.user %}
+                <li><a href="{{ url_for('mypage') }}" style="color: #3498db; font-weight: bold;">マイページ</a></li>
+                <li><a href="{{ url_for('weight_page') }}">体重記録</a></li>
+                <li><a href="{{ url_for('meal_page') }}">食事記録</a></li>
+                <li><a href="{{ url_for('training_page') }}">トレーニング記録</a></li>
+                <li><a href="{{ url_for('gym_register') }}">マイジム登録</a></li>
+                <li><a href="{{ url_for('logout') }}">ログアウト</a></li>
+            {% else %}
+                <li><a href="{{ url_for('login') }}">ログイン</a></li>
+                <li><a href="{{ url_for('register') }}">新規登録</a></li>
+            {% endif %}
         </ul>
     </nav>
 
     <main>
+        {% if g.user %}
+            <div style="text-align: center; margin: 20px 0;">
+                <p>こんにちは、<strong>{{ g.user['username'] }}</strong> さん！</p>
+                <a href="{{ url_for('mypage') }}" style="display: inline-block; padding: 10px 20px; background-color: #3498db; color: white; text-decoration: none; border-radius: 5px;">マイページを見る</a>
+            </div>
+        {% endif %}
+
         <div class="banner-container">
             <a href="#" class="info-banner" style="background-image: url('https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=2069');">
                 <h2>正しいスクワットの方法</h2>

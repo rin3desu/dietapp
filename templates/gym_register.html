@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>マイジム登録 - Diet App</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        /* 地図の高さを指定（必須） */
+        #map { height: 400px; width: 100%; margin-bottom: 20px; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>マイジムを登録する（最大2件まで）</h2>
+        
+        <div>
+            <input type="text" id="search-input" placeholder="地域名やジムの名前で検索" style="width: 70%;">
+            <button type="button" id="search-btn">検索</button>
+        </div>
+
+        <div id="map"></div>
+
+        <form method="POST" action="/gym_register">
+            <input type="hidden" name="latitude" id="lat">
+            <input type="hidden" name="longitude" id="lng">
+            
+            <div>
+                <label for="gym-name">ジムの名前:</label>
+                <input type="text" name="gym_name" id="gym-name" placeholder="例: エニタイムフィットネス 〇〇店" required>
+            </div>
+            <button type="submit" style="margin-top: 10px;">この場所をマイジムとして登録</button>
+        </form>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // 1. 地図の初期設定（名古屋駅周辺を初期表示のターゲットに設定しています）
+        var map = L.map('map').setView([35.1709, 136.8815], 13);
+
+        // 2. OpenStreetMapの画像データを読み込む
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        var marker;
+
+        // 3. マーカー（ピン）を置く関数
+        function placeMarker(lat, lng) {
+            if (marker) {
+                map.removeLayer(marker); // 古いピンを消す
+            }
+            marker = L.marker([lat, lng]).addTo(map); // 新しいピンを置く
+            
+            // 隠しフィールドに緯度と経度をセット
+            document.getElementById('lat').value = lat;
+            document.getElementById('lng').value = lng;
+        }
+
+        // 4. 地図をクリックしたときにピンを置く
+        map.on('click', function(e) {
+            placeMarker(e.latlng.lat, e.latlng.lng);
+        });
+
+        // 5. 検索ボタンを押したときの処理（無料の検索機能「Nominatim」を使用）
+        document.getElementById('search-btn').addEventListener('click', function() {
+            var query = document.getElementById('search-input').value;
+            if (!query) return;
+
+            fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(query))
+                .then(response => response.json())
+                .then(data => {
+                    if(data.length > 0) {
+                        var lat = data[0].lat;
+                        var lon = data[0].lon;
+                        map.setView([lat, lon], 16); // 検索した場所にズーム
+                        placeMarker(lat, lon);
+                    } else {
+                        alert('見つかりませんでした。別のキーワードでお試しください。');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        });
+    </script>
+</body>
+</html>

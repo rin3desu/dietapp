@@ -247,6 +247,70 @@ def training_page():
     
     return render_template('training.html', sessions=sessions_with_sets)
 
+@app.route('/mypage')
+@login_required
+def mypage():
+    db = get_db()
+    user_id = g.user['id']
+    
+    # 登録されているマイジムを取得
+    gyms = db.execute('SELECT * FROM gyms WHERE user_id = ?', (user_id,)).fetchall()
+    
+    #　最新の体重を取得
+    latest_weight = db.execute(
+        'SELECT weight FROM weights WHERE user_id = ? ORDER BY date DESC LIMIT 1',
+        (user_id,)
+    ).fetchone()
+    
+    #記録がない場合は「未記録」と表示する
+    current_weight = latest_weight['weight'] if latest_weight else '未記録'
+    
+    #トレーニングした日付を取得(重複なし)
+    training_dates = db.execute(
+        'SELECT DISTINCT date FROM training_sessions WHERE user_id = ? ORDER BY date DESC',
+        (user_id,)
+    ).fetchall()
+    
+    return render_template('mypage.html', gyms=gyms, current_weight=current_weight, training_dates=training_dates)
+
+
+@app.route('/gym_register', methods=['GET', 'POST'])
+def gym_register():
+    # ログインしていない場合はログイン画面へ
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        user_id = session['user_id']
+        gym_name = request.form.get('gym_name')
+        lat = request.form.get('latitude')
+        lng = request.form.get('longitude')
+
+        # ピンが置かれていない（緯度経度がない）場合はエラー
+        if not lat or not lng:
+            flash('地図上でジムの場所をクリックしてピンを立ててください。')
+            return redirect(url_for('gym_register'))
+
+        db = get_db()
+        
+        # 【重要】すでに登録されているマイジムの数をカウントする
+        count = db.execute('SELECT COUNT(*) FROM gyms WHERE user_id = ?', (user_id,)).fetchone()[0]
+        
+        if count >= 2:
+            flash('マイジムは2件までしか登録できません。')
+            return redirect(url_for('gym_register'))
+
+        # 2件未満ならデータベースに保存
+        db.execute('INSERT INTO gyms (user_id, name, latitude, longitude) VALUES (?, ?, ?, ?)',
+                   (user_id, gym_name, lat, lng))
+        db.commit()
+        
+        flash(f'「{gym_name}」をマイジムに登録しました！')
+        # 登録後はマイページなどに戻る（いったんトップページにしています）
+        return redirect(url_for('index'))
+
+    # GETメソッドの場合は単に画面を表示
+    return render_template('gym_register.html')
 
 # --- アプリケーションの実行 ---
 if __name__ == "__main__":
