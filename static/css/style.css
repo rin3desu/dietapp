@@ -83,13 +83,16 @@ a{
 main {
     padding-top: 60px; /* 固定ヘッダー分のスペースを確保 */
 }
-
-/* バナー */
 .banner-container {
     padding: 20px;
     display: grid;
+    /* スマホ（初期状態）は1列 */
+    grid-template-columns: 1fr; 
     gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
 }
+
 .info-banner {
     display: flex;
     align-items: center;
@@ -101,8 +104,14 @@ main {
     position: relative;
     overflow: hidden;
     color: white;
+    transition: transform 0.3s ease; /* ホバー時の動きを追加 */
 }
-/* バナーの背景画像の上に暗いフィルターをかける（文字を見やすくするため） */
+
+/* ホバー時に少し浮き上がる演出 */
+.info-banner:hover {
+    transform: translateY(-5px);
+}
+
 .info-banner::before {
     content: '';
     position: absolute;
@@ -113,27 +122,30 @@ main {
     background-color: rgba(0, 0, 0, 0.4);
     z-index: 1;
 }
+
 .info-banner h2 {
-    font-size: 2em;
-    z-index: 2; /* 文字をフィルターの上に表示 */
+    font-size: 1.5em; /* 3つ並ぶので少しサイズを調整 */
+    z-index: 2;
     text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+    padding: 0 10px;
 }
 
-.page-background{
-    background-size: cover ;
-    background-position: center;
-    background-attachment: fixed; 
-    padding-top: 60px;
-}
+/* PC用設定: 画面幅が768px以上の場合に適用
+   (一般的なタブレット・PCサイズ)
+*/
+@media (min-width: 768px) {
+    .banner-container {
+        /* PCでは均等に3列並べる */
+        grid-template-columns: repeat(3, 1fr); 
+    }
+    
+    .info-banner {
+        height: 300px; /* PCでは少し高さを出す */
+    }
 
-.content-wrapper {
-    max-width: 900px;
-    margin: 2em auto;
-    padding: 20px 30px;
-
-    background-color: rgba(255,255,255,0.92);
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    .info-banner h2 {
+        font-size: 1.8em;
+    }
 }
 
 /* テーブルのデザインを少し整える */

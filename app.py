@@ -6,12 +6,17 @@ from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, g, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from google import genai
+
 
 # --- アプリケーションの初期化 ---
 app = Flask(__name__)
 
 # 【修正点】secret_key を設定。これはflashやsession機能に必須です。
 app.secret_key = 'your-very-secret-key-that-no-one-can-guess'
+# Gemini APIの設定
+gemini_api_key = os.environ.get("GEMINI_API_KEY")
+client = genai.Client(api_key=gemini_api_key) if gemini_api_key else None
 
 # Renderの環境変数から永続ディスクのパスを取得し、なければローカルの'instance'フォルダを使う
 data_dir = os.environ.get('RENDER_DISK_MOUNT_PATH', 'instance')
@@ -365,6 +370,80 @@ def delete_gym(gym_id):
         flash('削除に失敗しました。アクセス権がないか、既に削除されています。')
 
     return redirect(url_for('mypage'))
+
+@app.route('/recommend', methods=['GET', 'POST'])
+@login_required
+def recommend_page():
+    db = get_db()
+    user_id = g.user['id']
+    
+    # 選択肢用のジムリスト取得
+    gyms = db.execute('SELECT * FROM gyms WHERE user_id = ?', (user_id,)).fetchall()
+    recommendation = None
+
+    if request.method == 'POST':
+        gym_id = request.form.get('gym_id')
+        target_muscle = request.form.get('target_muscle')
+        time_minutes = request.form.get('time_minutes')
+
+        # デバッグ用プリント
+        print(f"DEBUG: gym_id={gym_id}, muscle={target_muscle}, time={time_minutes}")
+
+        machines = db.execute(
+            'SELECT name FROM machines WHERE gym_id = ? AND target_muscle = ?',
+            (gym_id, target_muscle)
+        ).fetchall()
+
+        # マシンが何件見つかったか表示
+        print(f"DEBUG: 見つかったマシンの数: {len(machines)}")
+
+        if not machines:
+            flash(f'そのジムには「{target_muscle}」用のマシンが登録されていません。')
+        elif not client:
+            print("DEBUG: APIキーが読み込めていません(client is None)")
+            flash('APIキーが設定されていないため、AI機能を利用できません。')
+        else:
+            machine_names = ", ".join([m['name'] for m in machines])
+            print(f"DEBUG: AIに送るマシンリスト: {machine_names}")
+
+            # --- 【ここから修正：prompt の中身を定義する】 ---
+            prompt = f"""
+            あなたはプロのトレーナーとして、簡潔で実用的なメニューのみを作成してください。
+            余計な挨拶、励まし、導入文は一切不要です。以下の【形式】を厳守してください。
+
+            【条件】
+            - 対象部位: {target_muscle}
+            - 所要時間: {time_minutes}分
+            - 利用可能なマシン: {machine_names}
+
+            【形式】
+            今回のトレーニングメニュー
+            1. [マシン名] [回数]回[セット数]セット インターバル[分]分 想定[分]分
+            2. ...（マシンの数に合わせて作成）
+
+            [マシン名]のアドバイス：
+            [1行で簡潔に意識するポイントを記述]
+            
+            
+            出力は、上記の形式に沿ったテキストのみとしてください。解説や挨拶は含めないでください。
+            """
+            # --- 【ここまで】 ---
+
+            try:
+                print("DEBUG: AIにリクエスト送信中...")
+                response = client.models.generate_content(
+                    # 'gemini-2.0-flash' から以下のいずれかに変更
+                    model='gemini-2.5-flash', 
+                    # もしくは model='gemini-flash-latest'
+                    contents=prompt
+                )
+                recommendation = response.text
+                print("DEBUG: AIから回答を受信しました！")
+            except Exception as e:
+                print(f"DEBUG: AIエラー発生: {e}")
+                flash(f"AIの生成中にエラーが発生しました: {e}")
+
+    return render_template('recommend.html', gyms=gyms, recommendation=recommendation)
 
 # --- アプリケーションの実行 ---
 if __name__ == "__main__":
