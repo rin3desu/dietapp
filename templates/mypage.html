@@ -25,9 +25,19 @@
         <div class="card">
             <h3>マイジム（最大2件）</h3>
             {% if gyms %}
-                <ul>
+                <ul style="list-style: none; padding: 0;">
                 {% for gym in gyms %}
-                    <li><strong>{{ gym['name'] }}</strong></li>
+                    <li style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 10px; border-bottom: 1px solid #eee;">
+                        <a href="{{ url_for('gym_detail', gym_id=gym['id']) }}" style="font-size: 18px; font-weight: bold; color: #2c3e50; text-decoration: none;">
+                            {{ gym['name'] }}
+                        </a>
+                        
+                        <form action="{{ url_for('delete_gym', gym_id=gym['id']) }}" method="POST" onsubmit="return confirm('このジムと、登録されたマシン情報もすべて削除されます。本当によろしいですか？');">
+                            <button type="submit" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                削除
+                            </li>
+                        </form>
+                    </li>
                 {% endfor %}
                 </ul>
             {% else %}

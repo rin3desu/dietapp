@@ -312,6 +312,60 @@ def gym_register():
     # GETメソッドの場合は単に画面を表示
     return render_template('gym_register.html')
 
+@app.route('/gym/<int:gym_id>', methods=['GET', 'POST'])
+@login_required
+def gym_detail(gym_id):
+    db = get_db()
+    user_id = g.user['id']
+
+    # 1. 指定されたジムが、ログイン中のユーザーのものか確認する
+    gym = db.execute('SELECT * FROM gyms WHERE id = ? AND user_id = ?', (gym_id, user_id)).fetchone()
+    
+    if gym is None:
+        flash('指定されたジムが見つからないか、アクセス権がありません。')
+        return redirect(url_for('mypage'))
+
+    # 2. マシンを登録する処理（POSTリクエスト時）
+    if request.method == 'POST':
+        machine_name = request.form.get('machine_name')
+        target_muscle = request.form.get('target_muscle')
+
+        if not machine_name or not target_muscle:
+            flash('マシン名と対象部位を選択・入力してください。')
+        else:
+            db.execute('INSERT INTO machines (gym_id, name, target_muscle) VALUES (?, ?, ?)',
+                       (gym_id, machine_name, target_muscle))
+            db.commit()
+            flash(f'「{machine_name}」を登録しました！')
+            return redirect(url_for('gym_detail', gym_id=gym_id))
+
+    # 3. このジムに登録されているマシンの一覧を取得する
+    machines = db.execute('SELECT * FROM machines WHERE gym_id = ? ORDER BY target_muscle, id DESC', (gym_id,)).fetchall()
+
+    return render_template('gym_detail.html', gym=gym, machines=machines)
+
+@app.route('/delete_gym/<int:gym_id>', methods=['POST'])
+@login_required
+def delete_gym(gym_id):
+    db = get_db()
+    user_id = g.user['id']
+
+    # 1. 削除対象のジムが、ログイン中のユーザーのものか確認
+    gym = db.execute('SELECT * FROM gyms WHERE id = ? AND user_id = ?', (gym_id, user_id)).fetchone()
+    
+    if gym:
+        # 2. そのジムに紐付いているマシンを先に削除
+        db.execute('DELETE FROM machines WHERE gym_id = ?', (gym_id,))
+        
+        # 3. ジム自体を削除
+        db.execute('DELETE FROM gyms WHERE id = ?', (gym_id,))
+        db.commit()
+        flash(f'「{gym["name"]}」を削除しました。')
+    else:
+        flash('削除に失敗しました。アクセス権がないか、既に削除されています。')
+
+    return redirect(url_for('mypage'))
+
 # --- アプリケーションの実行 ---
 if __name__ == "__main__":
     app.run(debug=False)
