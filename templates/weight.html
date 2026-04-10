@@ -2,97 +2,123 @@
 
 {% block title %}体重記録 - Diet App{% endblock %}
 
-{% block body_attributes%}
-    class = "page-background" style="background-image: url('https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=2120');"
+{% block body_attributes %}
+    class="page-background" style="background-image: url('https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=2120');"
 {% endblock %}
 
 {% block content %}
-<div class="content-wrapper">
-    <h1>体重記録</h1>
+<div class="content-container">
+    <h1 class="page-title">体重マネジメント</h1>
 
-    <section>
-        <h2>今日の体重を記録する</h2>
-        <form action="{{ url_for('weight_page') }}" method="post">
-            <p>
-                <label for="date">日付:</label>
-                <input type="date" id="date" name="date" required>
-            </p>
-            <p>
-                <label for="weight">体重 (kg):</label>
-                <input type="number" step="0.1" id="weight" name="weight" required>
-            </p>
-            <button type="submit">記録する</button>
-        </form>
-    </section>
+    <div class="dashboard-grid">
+        <div class="card form-card">
+            <div class="card-header">
+                <i class="fas fa-plus-circle"></i> 今日の記録を追加
+            </div>
+            <form action="{{ url_for('weight_page') }}" method="post" class="styled-form">
+                <div class="form-group">
+                    <label for="date">記録日</label>
+                    <input type="date" id="date" name="date" required value="{{ today }}">
+                </div>
+                <div class="form-group">
+                    <label for="weight">体重 (kg)</label>
+                    <div class="input-with-unit">
+                        <input type="number" step="0.1" id="weight" name="weight" placeholder="00.0" required>
+                        <span class="unit">kg</span>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary">データを保存する</button>
+            </form>
+        </div>
 
-    <hr>
+        <div class="card chart-card">
+            <div class="card-header">
+                <i class="fas fa-chart-line"></i> 体重推移グラフ
+            </div>
+            <div class="chart-container">
+                <canvas id="weightChart"></canvas>
+            </div>
+        </div>
 
-    <section>
-        <h2>体重推移グラフ</h2>
-        <canvas id="weightChart" width="400" height="200"></canvas>
-    </section>
-
-    <hr>
-
-    <section>
-        <h2>体重履歴</h2>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>記録日時</th>
-                    <th>体重 (kg)</th>
-                    <th>前日比</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for record in records %}
-                <tr>
-                    <td>{{ record['date'] }}</td>
-                    <td>{{ record['weight'] }}</td>
-                    <td>
-                        {% if record.difference is not none %}
-                            {% set diff_class = 'diff-plus' if record.difference > 0 else 'diff-minus' %}
-                            <span class="{{ diff_class }}">
-                                {{ '%+.1f'|format(record.difference) }} kg
-                            </span>
-                        {% else %}
-                            -
-                        {% endif %}
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="3">まだ体重の記録がありません。</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </section>
+        <div class="card history-card">
+            <div class="card-header">
+                <i class="fas fa-history"></i> 体重履歴
+            </div>
+            <div class="table-responsive">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>日付</th>
+                            <th>体重</th>
+                            <th>前日比</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in records %}
+                        <tr>
+                            <td>{{ record['date'] }}</td>
+                            <td class="weight-cell">{{ record['weight'] }} <small>kg</small></td>
+                            <td>
+                                {% if record.difference is not none %}
+                                    {% set diff_class = 'diff-plus' if record.difference > 0 else 'diff-minus' %}
+                                    <span class="diff-badge {{ diff_class }}">
+                                        {{ '%+.1f'|format(record.difference) }}
+                                    </span>
+                                {% else %}
+                                    <span class="diff-none">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
-    // Flaskから渡されたデータをJavaScriptの変数に変換
     const labels = {{ dates | tojson }};
     const data = {{ weights | tojson }};
 
     const ctx = document.getElementById('weightChart').getContext('2d');
-    const weightChart = new Chart(ctx, {
-        type: 'line', // 折れ線グラフ
+    
+    // グラデーションの作成
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, 'rgba(75, 192, 192, 0.4)');
+    gradient.addColorStop(1, 'rgba(75, 192, 192, 0)');
+
+    new Chart(ctx, {
+        type: 'line',
         data: {
             labels: labels,
             datasets: [{
                 label: '体重 (kg)',
                 data: data,
-                borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1
+                borderColor: '#4bc0c0',
+                backgroundColor: gradient,
+                fill: true,
+                borderWidth: 3,
+                pointBackgroundColor: '#fff',
+                pointBorderColor: '#4bc0c0',
+                pointHoverRadius: 6,
+                tension: 0.4 // グラフを滑らかに
             }]
         },
         options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false } // 凡例を非表示にしてスッキリ
+            },
             scales: {
                 y: {
-                    beginAtZero: false // Y軸の開始を0にしない
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    beginAtZero: false
+                },
+                x: {
+                    grid: { display: false }
                 }
             }
         }

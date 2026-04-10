@@ -167,3 +167,131 @@ main {
 /* 体重の前日比の文字色 */
 .diff-plus { color: #d9534f; } /* 赤色 (増加) */
 .diff-minus { color: #5cb85c; } /* 緑色 (減少) */
+
+/* レイアウト全体 */
+.content-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.page-title {
+    color: white;
+    text-align: center;
+    margin-bottom: 30px;
+    font-weight: bold;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* カードデザイン */
+.card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.card-header {
+    font-weight: bold;
+    font-size: 1.1em;
+    margin-bottom: 20px;
+    color: #2c3e50;
+    border-bottom: 2px solid #f0f2f5;
+    padding-bottom: 10px;
+}
+
+/* フォーム調整 */
+.styled-form .form-group {
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+.styled-form label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.styled-form input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+.input-with-unit {
+    position: relative;
+}
+
+.input-with-unit .unit {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #888;
+}
+
+.btn-primary {
+    width: 100%;
+    background: #4bc0c0;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.btn-primary:hover {
+    background: #38a3a3;
+}
+
+/* 履歴テーブル */
+.modern-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.modern-table th {
+    background: #f8fafc;
+    padding: 12px;
+    font-size: 0.85em;
+    color: #64748b;
+}
+
+.modern-table td {
+    padding: 15px 12px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.weight-cell {
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+/* 前日比バッジ */
+.diff-badge {
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: bold;
+}
+
+.diff-plus { background: #fee2e2; color: #ef4444; }
+.diff-minus { background: #dcfce7; color: #22c55e; }
+
+/* レスポンシブ対応 (PCで見るときは横並び、スマホは縦) */
+@media (min-width: 768px) {
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 20px;
+    }
+    .history-card {
+        grid-column: span 2;
+    }
+}
