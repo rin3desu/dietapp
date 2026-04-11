@@ -1,74 +1,128 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Diet App{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
+{% extends 'layout.html' %}
 
-    <header class="main-header">
-        <a href="{{ url_for('index') }}" class="site-title">Diet App</a>
-        
-        <button class="hamburger-menu">
-            <span class="bar"></span>
-            <span class="bar"></span>
-            <span class="bar"></span>
-        </button>
-    </header>
+{% block title %}トップページ - Diet App{% endblock %}
 
-    <nav class="slide-nav">
-        <ul>
-            <li><a href="{{ url_for('index') }}">トップページ</a></li>
-            
-            {% if g.user %}
-                <li><a href="{{ url_for('mypage') }}" style="color: #3498db; font-weight: bold;">マイページ</a></li>
-                <li><a href="{{ url_for('weight_page') }}">体重記録</a></li>
-                <li><a href="{{ url_for('meal_page') }}">食事記録</a></li>
-                <li><a href="{{ url_for('training_page') }}">トレーニング記録</a></li>
-                <li><a href="{{ url_for('gym_register') }}">マイジム登録</a></li>
-                <li><a href="{{ url_for('logout') }}">ログアウト</a></li>
-            {% else %}
-                <li><a href="{{ url_for('login') }}">ログイン</a></li>
-                <li><a href="{{ url_for('register') }}">新規登録</a></li>
-            {% endif %}
-        </ul>
-    </nav>
+{% block body_attributes %}
+    class="page-background" style="background-color: #050505; background-image: url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070'); background-blend-mode: overlay; background-position: center;"
+{% endblock %}
 
-    <main>
+{% block content %}
+<div class="content-container">
+    
+    <div style="text-align: center; margin-bottom: 40px; padding-top: 20px;">
         {% if g.user %}
-            <div style="text-align: center; margin: 20px 0;">
-                <p>こんにちは、<strong>{{ g.user['username'] }}</strong> さん！</p>
-                <a href="{{ url_for('mypage') }}" style="display: inline-block; padding: 10px 20px; background-color: #3498db; color: white; text-decoration: none; border-radius: 5px;">マイページを見る</a>
-            </div>
+            <p style="color: #fff; font-size: 1.5rem; text-shadow: 0 0 10px #ff003c;">
+                Welcome back, <strong>{{ g.user['username'] }}</strong> !
+            </p>
+            <a href="{{ url_for('mypage') }}" class="neon-btn">マイページへ進む</a>
+        {% else %}
+            <h1 style="color: #fff; font-size: 3rem; text-shadow: 0 0 10px #ff003c, 0 0 20px #ff003c; font-weight: 900; letter-spacing: 2px;">Diet App</h1>
+            <p style="color: #ccc; font-size: 1.2rem; margin-bottom: 25px;">理想のカラダを、AIと共に。</p>
+            <a href="{{ url_for('login') }}" class="neon-btn">ログインして始める</a>
         {% endif %}
+    </div>
 
-        <div class="banner-container">
-            <a href="#" class="info-banner" style="background-image: url('https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=2069');">
-                <h2>正しいスクワットの方法</h2>
-            </a>
+    <div class="neon-banner-container">
+        
+        <a href="#" class="neon-banner" style="background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=2069');">
+            <h2>📖 トレーニング図鑑</h2>
+            <p class="coming-soon">Coming Soon...</p>
+        </a>
 
-            <a href="#" class="info-banner" style="background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1780');">
-                <h2>高タンパク質レシピ集</h2>
-            </a>
+        <a href="#" class="neon-banner" style="background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1780');">
+            <h2>🍳 高タンパク質レシピ集</h2>
+            <p class="coming-soon">Coming Soon...</p>
+        </a>
 
-            <a href="{{ url_for('recommend_page') }}" class="info-banner ai-banner" style="background-image: url('https://images.unsplash.com/photo-1593344484962-796055d4a3a4?q=80&w=1915');">
-                <h2>🤖 AIメニューを組む</h2>
-            </a>
-        </div>
-    </main>
+        <a href="{{ url_for('recommend_page') }}" class="neon-banner ai-banner" style="background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1593344484962-796055d4a3a4?q=80&w=1915');">
+            <h2>🤖 AIメニューを組む</h2>
+            <p>最新AIがあなた専用のメニューを生成</p>
+        </a>
+        
+    </div>
+</div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const hamburger = document.querySelector('.hamburger-menu');
-            const nav = document.querySelector('.slide-nav');
+<style>
+    /* バナーを囲むコンテナ */
+    .neon-banner-container {
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+        max-width: 800px;
+        margin: 0 auto;
+        padding-bottom: 50px;
+    }
 
-            hamburger.addEventListener('click', function() {
-                nav.classList.toggle('open');
-            });
-        });
-    </script>
+    /* ネオン枠のバナーデザイン */
+    .neon-banner {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 180px;
+        text-decoration: none;
+        color: white;
+        border-radius: 15px;
+        background-size: cover;
+        background-position: center;
+        
+        /* ★ ここが赤いネオンのキモ ★ */
+        border: 2px solid #ff003c;
+        box-shadow: 0 0 10px #ff003c, inset 0 0 10px #ff003c;
+        transition: all 0.3s ease;
+        text-align: center;
+    }
 
-</body>
-</html>
+    /* ホバー（カーソルを乗せたとき）にネオンが強く光る */
+    .neon-banner:hover {
+        transform: scale(1.03);
+        box-shadow: 0 0 20px #ff003c, 0 0 40px #ff003c, inset 0 0 20px #ff003c;
+        border-color: #ff3366;
+        z-index: 10;
+    }
+
+    .neon-banner h2 {
+        margin: 0;
+        font-size: 2rem;
+        text-shadow: 0 0 5px #ff003c, 0 0 15px #ff003c;
+        letter-spacing: 2px;
+        font-weight: 900;
+    }
+
+    .neon-banner p {
+        margin-top: 10px;
+        font-size: 1.1rem;
+        color: #ddd;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+        font-weight: bold;
+    }
+
+    .coming-soon {
+        color: #ff6680 !important;
+        font-style: italic;
+    }
+
+    /* ネオン風のボタン */
+    .neon-btn {
+        display: inline-block;
+        padding: 12px 35px;
+        background-color: transparent;
+        color: #ff003c;
+        text-decoration: none;
+        border: 2px solid #ff003c;
+        border-radius: 30px;
+        font-weight: bold;
+        font-size: 1.2rem;
+        box-shadow: 0 0 10px #ff003c, inset 0 0 5px #ff003c;
+        text-shadow: 0 0 5px #ff003c;
+        transition: all 0.3s;
+    }
+
+    .neon-btn:hover {
+        background-color: #ff003c;
+        color: #fff;
+        box-shadow: 0 0 20px #ff003c, 0 0 40px #ff003c;
+        text-shadow: none;
+    }
+</style>
+{% endblock %}
