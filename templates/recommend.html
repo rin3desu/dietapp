@@ -1,45 +1,26 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AIメニュー推薦 - Diet App</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <style>
-        .recommend-container { max-width: 800px; margin: 40px auto; padding: 20px; }
-        .setup-card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px; }
-        .form-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: bold; color: #444; }
-        select, input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
-        
-        .submit-btn { 
-            width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .submit-btn:active { transform: scale(0.98); }
+{% extends 'layout.html' %}
 
-        /* AI回答エリアのスタイル */
-        .ai-result-card { background: #fff; padding: 30px; border-radius: 15px; border-left: 8px solid #764ba2; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .ai-content { 
-            white-space: pre-wrap; /* これがあると、AIの改行がそのまま反映されます */
-            line-height: 1.6;
-            font-family: monospace; /* フォントを等幅にすると、より「リスト」っぽくなります */
-        }
+{% block title %}AIメニュー提案 - Diet App{% endblock %}
+
+{% block body_attributes %}
+    class="page-background" style="background-image: url('https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=2070');"
+{% endblock %}
+
+{% block content %}
+<div class="content-container">
+    <h1 class="page-title" style="text-shadow: 0 2px 10px rgba(0,0,0,0.7);">🤖 AIメニュー提案</h1>
+
+    <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
         
-        /* ローディング表示 */
-        #loading { display: none; text-align: center; margin-top: 20px; color: #764ba2; font-weight: bold; }
-    </style>
-</head>
-<body>
-    <div class="recommend-container">
-        <h2 style="text-align: center;">🤖 AIパーソナルトレーナー</h2>
-        
-        <div class="setup-card">
-            <form method="POST" id="recommend-form">
-                <div class="form-group">
-                    <label>どこでトレーニングしますか？</label>
-                    <select name="gym_id" required>
+        <div class="card form-card" style="background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 15px; height: fit-content;">
+            <div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 20px; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+                <i class="fas fa-sliders-h"></i> メニューの条件
+            </div>
+            
+            <form action="{{ url_for('recommend_page') }}" method="POST" class="styled-form" id="recommend-form">
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="gym_id" style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">利用するジム</label>
+                    <select name="gym_id" id="gym_id" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
                         <option value="">ジムを選択してください</option>
                         {% for gym in gyms %}
                             <option value="{{ gym['id'] }}">{{ gym['name'] }}</option>
@@ -47,9 +28,9 @@
                     </select>
                 </div>
 
-                <div class="form-group">
-                    <label>今日のターゲット部位</label>
-                    <select name="target_muscle" required>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="target_muscle" style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">今日のターゲット部位</label>
+                    <select name="target_muscle" id="target_muscle" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
                         <option value="胸">胸</option>
                         <option value="背中">背中</option>
                         <option value="脚">脚</option>
@@ -59,36 +40,56 @@
                     </select>
                 </div>
 
-                <div class="form-group">
-                    <label>確保できる時間（分）</label>
-                    <input type="number" name="time_minutes" value="45" min="10" max="180">
+                <div class="form-group" style="margin-bottom: 25px;">
+                    <label for="time_minutes" style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">確保できる時間 (分)</label>
+                    <input type="number" name="time_minutes" id="time_minutes" value="45" min="10" max="180" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
                 </div>
 
-                <button type="submit" class="submit-btn" id="generate-btn">メニューを生成する</button>
+                <button type="submit" id="generate-btn" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s;">
+                    メニューを生成する
+                </button>
             </form>
             
-            <div id="loading">AIがメニューを考案中です。数秒お待ちください...</div>
-        </div>
-
-        {% if recommendation %}
-            <div class="ai-result-card">
-                <h3 style="margin-top: 0;">📋 AIの提案メニュー</h3>
-                <div class="ai-content">{{ recommendation }}</div>
+            <div id="loading" style="display: none; text-align: center; margin-top: 20px; color: #764ba2; font-weight: bold;">
+                <i class="fas fa-spinner fa-spin"></i> AIがメニューを考案中です。<br>数秒お待ちください...
             </div>
-        {% endif %}
-
-        <div style="text-align: center; margin-top: 30px;">
-            <a href="{{ url_for('mypage') }}">マイページに戻る</a>
         </div>
-    </div>
 
-    <script>
-        // 送信時にボタンを無効化し、ローディングを表示する
-        document.getElementById('recommend-form').onsubmit = function() {
-            document.getElementById('generate-btn').disabled = true;
-            document.getElementById('generate-btn').style.opacity = '0.5';
-            document.getElementById('loading').style.display = 'block';
-        };
-    </script>
-</body>
-</html>
+        <div class="card result-card" style="background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 15px;">
+            <div style="font-size: 1.3rem; font-weight: bold; margin-bottom: 20px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
+                <i class="fas fa-magic"></i> AIトレーナーの提案
+            </div>
+            
+            {% if recommendation %}
+                <div style="background: #fff; padding: 20px; border-radius: 10px; border-left: 6px solid #764ba2; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                    <h3 style="margin-top: 0; color: #333;">📋 今回のトレーニングメニュー</h3>
+                    <div class="ai-content" style="white-space: pre-wrap; line-height: 1.6; font-family: monospace; font-size: 1.05rem; color: #333;">{{ recommendation }}</div>
+                </div>
+            {% else %}
+                <div style="text-align: center; color: #888; padding: 50px 20px;">
+                    <i class="fas fa-robot" style="font-size: 4rem; color: #ccc; margin-bottom: 15px; display: block;"></i>
+                    左のフォームから条件を入力して、<br>あなただけの特別メニューを作成しましょう！
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+
+<style>
+    @media (max-width: 768px) {
+        .dashboard-grid { grid-template-columns: 1fr !important; }
+    }
+</style>
+
+<script>
+    // 送信時にボタンを無効化し、ローディングを表示する（二重送信防止）
+    document.getElementById('recommend-form').onsubmit = function() {
+        var btn = document.getElementById('generate-btn');
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+        btn.innerHTML = '生成中...';
+        document.getElementById('loading').style.display = 'block';
+    };
+</script>
+{% endblock %}

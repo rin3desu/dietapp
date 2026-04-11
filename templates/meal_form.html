@@ -7,39 +7,51 @@
 {% endblock %}
 
 {% block content %}
-<div class="content-wrapper">
-    <h1>食事記録を追加</h1>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/meal.css') }}">
 
-    <form action="{{ url_for('add_meal') }}" method="post" enctype="multipart/form-data">
-        <p>
-            <label for="date">日付:</label><br>
-            <input type="date" id="date" name="date" required>
-        </p>
-        <p>
-            <label for="time_slot">時間帯:</label><br>
-            <select id="time_slot" name="time_slot" required>
-                <option value="">--選択してください--</option>
-                <option value="朝食">朝食</option>
-                <option value="昼食">昼食</option>
-                <option value="夕食">夕食</option>
-                <option value="間食">間食</option>
-            </select>
-        </p>
-        <p>
-            <label for="content">食べたもの:</label><br>
-            <textarea id="content" name="content" rows="3" required></textarea>
-        </p>
-        <p>
-            <label for="ingredients">食材（任意）:</label><br>
-            <textarea id="ingredients" name="ingredients" rows="3"></textarea>
-        </p>
-        <p>
-            <label for="image">写真（任意）:</label><br>
-            <input type="file" id="image" name="image" accept="image/*">
-        </p>
+<div class="content-container">
+    <h1 class="page-title">新しい食事を記録</h1>
 
-        <button type="submit">記録する</button>
-        <a href="{{ url_for('meal_page') }}" style="margin-left: 10px;">戻る</a>
-    </form>
+    <div class="form-card">
+        <form action="{{ url_for('add_meal') }}" method="post" enctype="multipart/form-data" class="styled-form">
+            
+            <div class="form-group">
+                <label for="date"><i class="far fa-calendar-alt"></i> 日付</label>
+                <input type="date" id="date" name="date" required>
+            </div>
+
+            <div class="form-group">
+                <label for="time_slot"><i class="far fa-clock"></i> 時間帯</label>
+                <select id="time_slot" name="time_slot" required>
+                    <option value="">--選択してください--</option>
+                    <option value="朝">朝</option>
+                    <option value="昼">昼</option>
+                    <option value="夜">夜</option>
+                    <option value="間食">間食</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="content"><i class="fas fa-utensils"></i> 食べたもの</label>
+                <textarea id="content" name="content" rows="3" placeholder="例: ご飯、味噌汁、焼き魚..." required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="ingredients"><i class="fas fa-carrot"></i> 食材（任意）</label>
+                <textarea id="ingredients" name="ingredients" rows="2" placeholder="例: 鮭、大根、ネギ..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="image"><i class="fas fa-camera"></i> 写真（任意）</label>
+                <input type="file" id="image" name="image" accept="image/*">
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="btn-primary">記録する</button>
+                <a href="{{ url_for('meal_page') }}" class="btn-back">戻る</a>
+            </div>
+
+        </form>
+    </div>
 </div>
 {% endblock %}

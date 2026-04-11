@@ -6,47 +6,79 @@
 {% endblock %}
 
 {% block content %}
-<div class="content-wrapper">
-    <h1>食事記録</h1>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/meal.css') }}">
 
-    <a href="{{ url_for('meal_form') }}">
-        <button style="font-size: 1.2em; padding: 10px;">新しい食事を記録する</button>
-    </a>
-    
-    <hr>
+<div class="content-container meal-dashboard">
+    <h1 class="page-title">食事管理</h1>
 
-    <h2>食事履歴</h2>
-    
-    <!-- ↓↓↓ このテーブルタグを修正 ↓↓↓ -->
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th style="width: 10%;">日付</th>
-                <th style="width: 8%;">時間帯</th>
-                <th style="width: 25%;">内容</th>
-                <th style="width: 25%;">食材</th>
-                <th style="width: 22%;">写真</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for meal in meals %}
-            <tr>
-                <td>{{ meal['date'] }}</td>
-                <td>{{ meal['time_slot'] }}</td>
-                <td style="white-space: pre-wrap;">{{ meal['content'] }}</td>
-                <td style="white-space: pre-wrap;">{{ meal['ingredients'] }}</td>
-                <td>
-                    {% if meal['image_path'] %}
-                        <img src="{{ url_for('static', filename=meal['image_path'].replace('static/', '')) }}" alt="食事の写真" width="200" style="border-radius: 5px;">
-                    {% endif %}
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="5">まだ食事の記録がありません。</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <a href="{{ url_for('meal_form') }}" class="fab-add" title="新しい食事を記録する">+</a>
+
+    {% if meals %}
+        {% for group in meals | groupby('date') | reverse %}
+            <div class="date-group-card">
+                <h2 class="date-header">{{ group.grouper }}</h2>
+                
+                <div class="meal-grid">
+                    {% set morning = group.list | selectattr('time_slot', 'equalto', '朝') | list | first %}
+                    <div class="meal-card">
+                        <div class="meal-time-label morning">朝</div>
+                        {% if morning %}
+                            {% if morning['image_path'] %}
+                                <img src="{{ url_for('static', filename=morning['image_path'].replace('static/', '')) }}" class="meal-img" alt="朝食">
+                            {% endif %}
+                            <div class="meal-details">
+                                <p><strong>内容:</strong> <br><span style="white-space: pre-wrap;">{{ morning['content'] }}</span></p>
+                                <p><strong>食材:</strong> <br><span style="white-space: pre-wrap;">{{ morning['ingredients'] }}</span></p>
+                            </div>
+                        {% else %}
+                            <div class="empty-meal">
+                                <p>記録なし</p>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {% set lunch = group.list | selectattr('time_slot', 'equalto', '昼') | list | first %}
+                    <div class="meal-card">
+                        <div class="meal-time-label lunch">昼</div>
+                        {% if lunch %}
+                            {% if lunch['image_path'] %}
+                                <img src="{{ url_for('static', filename=lunch['image_path'].replace('static/', '')) }}" class="meal-img" alt="昼食">
+                            {% endif %}
+                            <div class="meal-details">
+                                <p><strong>内容:</strong> <br><span style="white-space: pre-wrap;">{{ lunch['content'] }}</span></p>
+                                <p><strong>食材:</strong> <br><span style="white-space: pre-wrap;">{{ lunch['ingredients'] }}</span></p>
+                            </div>
+                        {% else %}
+                            <div class="empty-meal">
+                                <p>記録なし</p>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {% set dinner = group.list | selectattr('time_slot', 'in', ['夜', '夕']) | list | first %}
+                    <div class="meal-card">
+                        <div class="meal-time-label dinner">夜</div>
+                        {% if dinner %}
+                            {% if dinner['image_path'] %}
+                                <img src="{{ url_for('static', filename=dinner['image_path'].replace('static/', '')) }}" class="meal-img" alt="夕食">
+                            {% endif %}
+                            <div class="meal-details">
+                                <p><strong>内容:</strong> <br><span style="white-space: pre-wrap;">{{ dinner['content'] }}</span></p>
+                                <p><strong>食材:</strong> <br><span style="white-space: pre-wrap;">{{ dinner['ingredients'] }}</span></p>
+                            </div>
+                        {% else %}
+                            <div class="empty-meal">
+                                <p>記録なし</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="date-group-card" style="text-align: center; padding: 50px;">
+            <p style="color: #666; font-size: 1.2rem;">まだ食事の記録がありません。</p>
+        </div>
+    {% endif %}
 </div>
 {% endblock %}
