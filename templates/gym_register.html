@@ -1,86 +1,146 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <title>マイジム登録 - Diet App</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        /* 地図の高さを指定（必須） */
-        #map { height: 400px; width: 100%; margin-bottom: 20px; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>マイジムを登録する（最大2件まで）</h2>
+{% extends 'layout.html' %}
+
+{% block title %}マイジム登録 - Diet App{% endblock %}
+
+{% block body_attributes %}
+    class="page-background" style="background-image: url('https://images.unsplash.com/photo-1576678927484-cc907957088c?q=80&w=2070'); background-position: center;"
+{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<div class="content-container">
+    <h1 class="page-title" style="text-shadow: 0 2px 10px rgba(0,0,0,0.7);">📍 マイジム登録</h1>
+
+    <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 800px; margin: 0 auto;">
         
-        <div>
-            <input type="text" id="search-input" placeholder="地域名やジムの名前で検索" style="width: 70%;">
-            <button type="button" id="search-btn">検索</button>
+        <div class="card form-card" style="background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 15px;">
+            <div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 20px; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+                <i class="fas fa-search-location"></i> 新しいジムを登録（最大2件）
+            </div>
+            
+            <form action="{{ url_for('gym_register') }}" method="POST" class="styled-form">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="gym_name" style="display: block; margin-bottom: 8px; font-weight: bold; color: #444;">ジムの名前</label>
+                    <input type="text" id="gym_name" name="gym_name" placeholder="例: エニタイムフィットネス 名古屋店" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #444;">場所の検索（地名や住所を入力）</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="search_query" placeholder="名古屋市昭和区..." style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
+                        <button type="button" id="search_btn" style="padding: 12px 20px; background: #3498db; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">検索</button>
+                    </div>
+                </div>
+
+                <div id="map" style="width: 100%; height: 300px; border-radius: 10px; margin-bottom: 20px; border: 2px solid #eee; z-index: 1;"></div>
+
+                <input type="hidden" id="lat" name="latitude">
+                <input type="hidden" id="lng" name="longitude">
+
+                <button type="submit" id="submit_btn" style="width: 100%; padding: 15px; background: #e67e22; color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: background 0.2s;" disabled>
+                    位置を確定して登録する
+                </button>
+            </form>
         </div>
 
-        <div id="map"></div>
-
-        <form method="POST" action="/gym_register">
-            <input type="hidden" name="latitude" id="lat">
-            <input type="hidden" name="longitude" id="lng">
-            
-            <div>
-                <label for="gym-name">ジムの名前:</label>
-                <input type="text" name="gym_name" id="gym-name" placeholder="例: エニタイムフィットネス 〇〇店" required>
+        <div class="card" style="background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 15px;">
+            <div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 20px; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+                <i class="fas fa-list-ul"></i> 登録済みのマイジム
             </div>
-            <button type="submit" style="margin-top: 10px;">この場所をマイジムとして登録</button>
-        </form>
-    </div>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        // 1. 地図の初期設定（名古屋駅周辺を初期表示のターゲットに設定しています）
-        var map = L.map('map').setView([35.1709, 136.8815], 13);
-
-        // 2. OpenStreetMapの画像データを読み込む
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
-
-        var marker;
-
-        // 3. マーカー（ピン）を置く関数
-        function placeMarker(lat, lng) {
-            if (marker) {
-                map.removeLayer(marker); // 古いピンを消す
-            }
-            marker = L.marker([lat, lng]).addTo(map); // 新しいピンを置く
             
-            // 隠しフィールドに緯度と経度をセット
-            document.getElementById('lat').value = lat;
-            document.getElementById('lng').value = lng;
+            {% if gyms %}
+                <ul style="list-style: none; padding: 0; margin: 0;">
+                {% for gym in gyms %}
+                    <li style="display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee;">
+                        <span style="font-weight: bold; font-size: 1.1rem; color: #333;">{{ gym['name'] }}</span>
+                        <a href="{{ url_for('gym_detail', gym_id=gym['id']) }}" style="background: #2ecc71; color: white; padding: 8px 15px; border-radius: 20px; text-decoration: none; font-size: 0.9rem; font-weight: bold; transition: background 0.2s;">
+                            マシンを管理 <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p style="text-align: center; color: #888; padding: 20px;">まだジムが登録されていません。</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // 1. 地図の初期設定（名古屋を初期位置に設定）
+    const map = L.map('map').setView([35.1709, 136.8815], 13);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    let marker;
+    const latInput = document.getElementById('lat');
+    const lngInput = document.getElementById('lng');
+    const submitBtn = document.getElementById('submit_btn');
+
+    // 2. 地図をクリックしたときの処理
+    map.on('click', function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+
+        // 既にピンがあれば消す
+        if (marker) {
+            map.removeLayer(marker);
         }
+        
+        // 新しいピンを刺す
+        marker = L.marker([lat, lng]).addTo(map);
 
-        // 4. 地図をクリックしたときにピンを置く
-        map.on('click', function(e) {
-            placeMarker(e.latlng.lat, e.latlng.lng);
-        });
+        // 隠しフォームに緯度・経度をセット
+        latInput.value = lat;
+        lngInput.value = lng;
 
-        // 5. 検索ボタンを押したときの処理（無料の検索機能「Nominatim」を使用）
-        document.getElementById('search-btn').addEventListener('click', function() {
-            var query = document.getElementById('search-input').value;
-            if (!query) return;
+        // ★ここで登録ボタンを有効化する！
+        submitBtn.disabled = false;
+        submitBtn.style.background = '#e74c3c'; // 赤色にして押せることをアピール
+        submitBtn.style.cursor = 'pointer';
+    });
 
-            fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(query))
-                .then(response => response.json())
-                .then(data => {
-                    if(data.length > 0) {
-                        var lat = data[0].lat;
-                        var lon = data[0].lon;
-                        map.setView([lat, lon], 16); // 検索した場所にズーム
-                        placeMarker(lat, lon);
-                    } else {
-                        alert('見つかりませんでした。別のキーワードでお試しください。');
+    // 3. 検索ボタン（Nominatim APIを使った地名検索）
+    document.getElementById('search_btn').addEventListener('click', function() {
+        const query = document.getElementById('search_query').value;
+        if (!query) return;
+
+        // OpenStreetMapの無料検索APIを叩く
+        fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(query))
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    const lat = data[0].lat;
+                    const lon = data[0].lon;
+                    
+                    // 地図を検索結果の場所に移動
+                    map.setView([lat, lon], 15);
+
+                    // ピンを刺す
+                    if (marker) {
+                        map.removeLayer(marker);
                     }
-                })
-                .catch(error => console.error('Error:', error));
-        });
-    </script>
-</body>
-</html>
+                    marker = L.marker([lat, lon]).addTo(map);
+
+                    // フォームにセットしてボタン有効化
+                    latInput.value = lat;
+                    lngInput.value = lon;
+                    submitBtn.disabled = false;
+                    submitBtn.style.background = '#e74c3c';
+                    submitBtn.style.cursor = 'pointer';
+                } else {
+                    alert('場所が見つかりませんでした。別のキーワードで試してください。');
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                alert('検索中にエラーが発生しました。');
+            });
+    });
+</script>
+{% endblock %}
