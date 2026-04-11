@@ -214,44 +214,93 @@ def add_meal():
 @app.route('/training', methods=['GET', 'POST'])
 @login_required
 def training_page():
-    user_id = g.user['id']
     db = get_db()
-    
+    user_id = g.user['id']
+    today = datetime.now().strftime('%Y-%m-%d')
+
+    # 1. マスターデータ（初期の種目リスト）
+    exercise_master = {
+        "胸": ["ベンチプレス", "ペックフライ", "チェストプレス"],
+        "背中": ["デッドリフト", "ラットプルダウン", "プーリーロー"],
+        "脚": ["スクワット", "スミスマシン・バーベルスクワット", "レッグプレス"],
+        "肩": ["ショルダープレス", "サイドレイズ"],
+        "腕": ["アームカール", "トライセプスプレス"],
+        "腹": ["クランチ", "プランク"]
+    }
+
+    # 2. ユーザーが独自に追加したカスタム種目をデータベースから取得して合体
+    customs = db.execute('SELECT muscle_group, name FROM custom_exercises WHERE user_id = ?', (user_id,)).fetchall()
+    for row in customs:
+        if row['muscle_group'] in exercise_master:
+            if row['name'] not in exercise_master[row['muscle_group']]:
+                exercise_master[row['muscle_group']].append(row['name'])
+
+    # 3. POSTリクエスト（データが送信されたとき）の処理
     if request.method == 'POST':
-        date = request.form.get("date")
-        part = request.form.get("part")
-        event = request.form.get("event")
+        # パターンA：新しいカスタム種目を追加した場合
+        if request.form.get('new_exercise_name'):
+            new_name = request.form.get('new_exercise_name')
+            part = request.form.get('muscle_group')
+            db.execute('INSERT INTO custom_exercises (user_id, muscle_group, name) VALUES (?, ?, ?)',
+                       (user_id, part, new_name))
+            db.commit()
+            flash(f"「{new_name}」を新しく追加しました！")
+            return redirect(url_for('training_page'))
 
-        cursor = db.execute(
-            'INSERT INTO training_sessions (user_id, date, part, event) VALUES (?, ?, ?, ?)',
-            (user_id, date, part, event)
-        )
-        db.commit()
-        session_id = cursor.lastrowid
+        # パターンB：トレーニングの記録をした場合
+        else:
+            date = request.form.get('date')
+            part = request.form.get('muscle_group')
+            event = request.form.get('exercise_name')
+            weights = request.form.getlist('weights[]')
+            reps = request.form.getlist('reps[]')
 
-        set_number = 1
-        while True:
-            weight = request.form.get(f'weight_{set_number}')
-            reps = request.form.get(f'reps_{set_number}')
-            if weight is not None and reps is not None and weight and reps:
-                db.execute('INSERT INTO training_sets (session_id, set_number, weight, reps) VALUES (?, ?, ?, ?)', (session_id, set_number, float(weight), int(reps)))
-                set_number += 1
-            else:
-                break
-        db.commit()
-        flash('トレーニングを記録しました！')
-        return redirect(url_for('training_page'))
+            if part and event:
+                # セッション（親データ）を保存
+                cursor = db.execute(
+                    'INSERT INTO training_sessions (user_id, date, part, event) VALUES (?, ?, ?, ?)',
+                    (user_id, date, part, event)
+                )
+                session_id = cursor.lastrowid
+                
+                # 各セット（子データ）を保存
+                for w, r in zip(weights, reps):
+                    if w and r:
+                        db.execute(
+                            'INSERT INTO training_sets (session_id, weight, reps) VALUES (?, ?, ?)',
+                            (session_id, float(w), int(r))
+                        )
+                db.commit()
+                flash("トレーニングを記録しました！")
+            return redirect(url_for('training_page'))
 
-    sessions = db.execute('SELECT * FROM training_sessions WHERE user_id = ? ORDER BY date DESC, id DESC', (user_id,)).fetchall()
-    sessions_with_sets = []
-    for session in sessions:
-        session_dict = dict(session)
-        sets = db.execute('SELECT * FROM training_sets WHERE session_id = ? ORDER BY set_number ASC', (session['id'],)).fetchall()
-        session_dict['sets'] = sets
-        sessions_with_sets.append(session_dict)
+    # 4. GETリクエスト（ページを普通に開いたとき）の処理
     
-    return render_template('training.html', sessions=sessions_with_sets)
+    # 今日の統計データを取得
+    stats = db.execute('''
+        SELECT COUNT(DISTINCT event) as events, COUNT(*) as sets, SUM(reps) as reps 
+        FROM training_sessions s JOIN training_sets t ON s.id = t.session_id 
+        WHERE s.user_id = ? AND s.date = ?''', (user_id, today)
+    ).fetchone()
 
+    # トレーニング履歴を取得（HTMLで表示しやすい形に整形）
+    raw_sessions = db.execute('SELECT * FROM training_sessions WHERE user_id = ? ORDER BY date DESC', (user_id,)).fetchall()
+    sessions = []
+    for s in raw_sessions:
+        sets = db.execute('SELECT weight, reps FROM training_sets WHERE session_id = ?', (s['id'],)).fetchall()
+        sessions.append({
+            'date': s['date'],
+            'muscle_group': s['part'],
+            'exercise_name': s['event'],
+            'sets': sets
+        })
+
+    # ★ここが抜けていたためエラーになっていました！★
+    return render_template('training.html', 
+                           master=exercise_master, 
+                           stats=stats, 
+                           today=today,
+                           sessions=sessions)
 @app.route('/mypage')
 @login_required
 def mypage():

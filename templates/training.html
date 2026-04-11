@@ -1,134 +1,189 @@
 {% extends 'layout.html' %}
+
 {% block title %}トレーニング記録 - Diet App{% endblock %}
 
 {% block body_attributes %}
-    class="page-background" style="background-image: url('https://images.unsplash.com/photo-1599058917212-d750089bc07e?q=80&w=2069');"
+    class="page-background" style="background-image: url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070');"
 {% endblock %}
 
 {% block content %}
-<div class="content-wrapper">
-    <h1>トレーニング記録</h1>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/training.css') }}">
 
-    <section>
-        <h2>今日のトレーニングを記録する</h2>
-        <form action="{{ url_for('training_page') }}" method="post">
-            <p>
-                <label for="date">日付:</label><br>
-                <input type="date" id="date" name="date" required>
-            </p>
-            <p>
-                <label for="part">部位:</label><br>
-                <select id="part" name="part" required>
-                    <option value="">部位を選択してください</option>
-                    <option value="胸">胸</option>
-                    <option value="背中">背中</option>
-                    <option value="脚">脚</option>
-                    <option value="肩">肩</option>
-                    <option value="腕">腕</option>
-                </select>
-            </p>
-            <p>
-                <label for="event">種目名:</label><br>
-                <select id="event" name="event" required>
-                    <option value="">---</option>
-                    </select>
-            </p>
+<div class="content-container training-dashboard">
+    <h1 class="page-title">トレーニング管理</h1>
+
+    <div class="stats-header">
+        <div class="stat-card">合計種目数<span>{{ stats.events or 0 }}</span></div>
+        <div class="stat-card">合計セット数<span>{{ stats.sets or 0 }}</span></div>
+        <div class="stat-card">合計レップ数<span>{{ stats.reps or 0 }}</span></div>
+    </div>
+
+    <button class="fab-add" onclick="showModal('exercise-modal')">+</button>
+
+    <div id="record-area" class="record-card-full" style="display:none;">
+        <div class="card-header">
+            <i class="fas fa-fire"></i> <span id="selected-exercise-title">種目名</span> を記録
+        </div>
+        <form action="{{ url_for('training_page') }}" method="POST" id="training-form">
+            <input type="hidden" name="muscle_group" id="hidden-part">
+            <input type="hidden" name="exercise_name" id="hidden-event">
             
-            <hr>
-            <h3>セットごとの記録</h3>
-            <div id="sets-container">
-                <div class="set-row">
-                    <span>セット1:</span>
-                    <input type="number" name="weight_1" placeholder="負荷(kg)" step="0.5" required> kg /
-                    <input type="number" name="reps_1" placeholder="回数" required> reps
-                </div>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <label for="date" style="font-weight: bold; color: #666;">実施日: </label>
+                <input type="date" id="date" name="date" required value="{{ today }}" style="padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 1.1rem;">
             </div>
-            <button type="button" id="add-set-btn">セットを追加</button>
-            <hr>
 
-            <button type="submit">この種目を記録する</button>
-        </form>
-    </section>
-
-    <hr>
-
-    <section>
-        <h2>トレーニング履歴</h2>
-        
-        {# ↓↓↓ この行に並び替えの指示を追加します ↓↓↓ #}
-        {% for session_group in sessions | groupby('date') | sort(reverse=True, attribute='grouper') %}
-            <h3>{{ session_group.grouper }}</h3>
-            <table class="data-table">
+            <table class="set-table">
                 <thead>
                     <tr>
-                        <th>部位</th>
-                        <th>種目名</th>
-                        <th>セット詳細 (負荷 x 回数)</th>
+                        <th style="width: 15%;">セット</th>
+                        <th style="width: 35%;">重さ (kg)</th>
+                        <th style="width: 30%;">回数</th>
+                        <th style="width: 20%;">RM(推定)</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {% for item in session_group.list %}
-                    <tr>
-                        <td>{{ item.part }}</td>
-                        <td>{{ item.event }}</td>
-                        <td>
-                            {% for set in item.sets %}
-                                <span>{{ set.weight }}kg x {{ set.reps }}reps</span><br>
-                            {% endfor %}
-                        </td>
+                <tbody id="set-tbody">
+                    {% for i in range(1, 4) %}
+                    <tr class="set-row">
+                        <td style="font-weight: bold; font-size: 1.2rem; color: #555;">{{ i }}</td>
+                        <td><input type="number" step="0.5" name="weights[]" class="w-input" oninput="calcRM(this)" placeholder="0.0"></td>
+                        <td><input type="number" name="reps[]" class="r-input" oninput="calcRM(this)" placeholder="0"></td>
+                        <td class="rm-display">- kg</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
-        {% else %}
-            <p>まだトレーニングの記録がありません。</p>
+            
+            <button type="button" class="btn-secondary" onclick="addNewSet()" style="width: 100%; padding: 15px; font-size: 1.1rem; margin-bottom: 15px; background: #ecf0f1; border: none; border-radius: 8px; cursor: pointer;">
+                <i class="fas fa-plus"></i> セットを追加
+            </button>
+            <button type="submit" class="btn-primary" style="width: 100%; padding: 15px; font-size: 1.2rem; background: #e74c3c; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: bold;">
+                トレーニングを完了
+            </button>
+        </form>
+    </div>
+
+    <div class="card history-card" style="width: 100%; margin-top: 20px;">
+        <div class="card-header">
+            <i class="fas fa-history"></i> 部位別トレーニング履歴
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="filterHistory('all')">すべて</button>
+            <button class="tab-btn" onclick="filterHistory('胸')">胸</button>
+            <button class="tab-btn" onclick="filterHistory('背中')">背中</button>
+            <button class="tab-btn" onclick="filterHistory('脚')">脚</button>
+            <button class="tab-btn" onclick="filterHistory('肩')">肩</button>
+            <button class="tab-btn" onclick="filterHistory('腕')">腕</button>
+            <button class="tab-btn" onclick="filterHistory('腹')">腹</button>
+        </div>
+
+        <div class="table-responsive history-list" id="history-container">
+            {% if sessions %}
+                {% for session in sessions %}
+                <div class="history-item card" data-muscle="{{ session.muscle_group }}">
+                    <div class="session-info">
+                        <span class="session-date">{{ session.date }}</span>
+                        <span class="session-muscle badge">{{ session.muscle_group }}</span>
+                        <span class="session-exercise" style="font-size: 1.2rem; margin-left: 10px;">{{ session.exercise_name }}</span>
+                    </div>
+                    <div class="session-details" style="margin-top: 10px;">
+                        {% for set in session.sets %}
+                            <span class="set-badge" style="background: #eee; padding: 5px 10px; border-radius: 5px; margin-right: 5px; display: inline-block; margin-bottom: 5px;">
+                                {{ set.weight }}kg × {{ set.reps }}
+                            </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="empty-msg" style="text-align: center; color: #888; padding: 30px;">まだトレーニングの記録がありません。</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div id="exercise-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e74c3c; padding-bottom: 10px; margin-bottom: 15px;">
+            <h3 style="margin: 0; color: #2c3e50;">種目を選択</h3>
+            <button onclick="closeModal('exercise-modal')" style="border: none; background: none; font-size: 2rem; cursor: pointer; color: #888;">&times;</button>
+        </div>
+        
+        {% for part, items in master.items() %}
+        <div class="master-group" style="margin-bottom: 25px;">
+            <div class="part-label">{{ part }}</div>
+            {% for item in items %}
+            <div class="exercise-item" onclick="selectExercise('{{ part }}', '{{ item }}')">
+                <i class="fas fa-play-circle" style="color: #ccc; margin-right: 10px;"></i> {{ item }}
+            </div>
+            {% endfor %}
+            
+            <form action="{{ url_for('training_page') }}" method="POST" class="add-exercise-form">
+                <input type="hidden" name="muscle_group" value="{{ part }}">
+                <input type="text" name="new_exercise_name" placeholder="新しい種目を追加..." required>
+                <button type="submit">追加</button>
+            </form>
+        </div>
         {% endfor %}
-    </section>
+    </div>
 </div>
 
 <script>
-    // 部位と種目のデータ
-    const exercises = {
-        '胸': ['ベンチプレス', 'ダンベルフライ', 'インクラインプレス', '腕立て伏せ'],
-        '背中': ['懸垂', 'デッドリフト', 'ベントオーバーロウ', 'ラットプルダウン'],
-        '脚': ['スクワット', 'レッグプレス', 'ランジ', 'レッグカール'],
-        '肩': ['ショルダープレス', 'サイドレイズ', 'フロントレイズ'],
-        '腕': ['アームカール', 'トライセプスキックバック', 'ハンマーカール']
-    };
+// --- Javascriptは前回と全く同じなのでそのまま引き継ぎます ---
+function calcRM(input) {
+    const row = input.closest('tr');
+    const w = parseFloat(row.querySelector('.w-input').value);
+    const r = parseInt(row.querySelector('.r-input').value);
+    const rmDisplay = row.querySelector('.rm-display');
+    if (w && r) {
+        const rm = w * (1 + r / 30);
+        rmDisplay.innerText = rm.toFixed(1) + " kg";
+    } else {
+        rmDisplay.innerText = "- kg";
+    }
+}
 
-    const partSelect = document.getElementById('part');
-    const eventSelect = document.getElementById('event');
-    const setsContainer = document.getElementById('sets-container');
-    const addSetBtn = document.getElementById('add-set-btn');
-    let setCount = 1;
+function selectExercise(part, name) {
+    document.getElementById('hidden-part').value = part;
+    document.getElementById('hidden-event').value = name;
+    document.getElementById('selected-exercise-title').innerText = name;
+    closeModal('exercise-modal');
+    document.getElementById('record-area').style.display = 'block';
+    document.getElementById('record-area').scrollIntoView({ behavior: 'smooth' });
+}
 
-    // 部位が選択されたら、種目の選択肢を更新する
-    partSelect.addEventListener('change', function() {
-        const selectedPart = this.value;
-        // 一旦種目リストを空にする
-        eventSelect.innerHTML = '<option value="">種目を選択してください</option>';
-        
-        if (selectedPart && exercises[selectedPart]) {
-            exercises[selectedPart].forEach(function(exercise) {
-                const option = document.createElement('option');
-                option.value = exercise;
-                option.textContent = exercise;
-                eventSelect.appendChild(option);
-            });
+function showModal(id) { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+function addNewSet() {
+    const tbody = document.getElementById('set-tbody');
+    const nextNum = tbody.rows.length + 1;
+    const newRow = `
+        <tr class="set-row">
+            <td style="font-weight: bold; font-size: 1.2rem; color: #555;">${nextNum}</td>
+            <td><input type="number" step="0.5" name="weights[]" class="w-input" oninput="calcRM(this)" placeholder="0.0"></td>
+            <td><input type="number" name="reps[]" class="r-input" oninput="calcRM(this)" placeholder="0"></td>
+            <td class="rm-display">- kg</td>
+        </tr>`;
+    tbody.insertAdjacentHTML('beforeend', newRow);
+}
+
+function filterHistory(muscle) {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if(btn.innerText === muscle || (muscle === 'all' && btn.innerText === 'すべて')) {
+            btn.classList.add('active');
         }
     });
-
-    // 「セットを追加」ボタンが押されたら、入力欄を増やす
-    addSetBtn.addEventListener('click', function() {
-        setCount++;
-        const newSetRow = document.createElement('div');
-        newSetRow.classList.add('set-row');
-        newSetRow.innerHTML = `
-            <span>セット${setCount}:</span>
-            <input type="number" name="weight_${setCount}" placeholder="負荷(kg)" step="0.5" required> kg /
-            <input type="number" name="reps_${setCount}" placeholder="回数" required> reps
-        `;
-        setsContainer.appendChild(newSetRow);
+    const items = document.querySelectorAll('.history-item');
+    items.forEach(item => {
+        if (muscle === 'all' || item.getAttribute('data-muscle') === muscle) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
     });
+}
 </script>
 {% endblock %}

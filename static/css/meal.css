@@ -1,0 +1,232 @@
+/* static/css/meal.css */
+
+:root {
+    --morning-color: #f39c12; /* 朝: オレンジ */
+    --lunch-color: #27ae60;   /* 昼: グリーン */
+    --dinner-color: #2980b9;  /* 夜: ブルー */
+}
+
+.meal-dashboard {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding-bottom: 80px; /* フローティングボタンが被らないように余白 */
+}
+
+.page-title {
+    color: white;
+    text-align: center;
+    margin-bottom: 30px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* 日付ごとのブロック */
+.date-group-card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.date-header {
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 1.6rem;
+}
+
+/* 朝・昼・夜を並べるグリッド */
+.meal-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+/* 個別の食事カード */
+.meal-card {
+    background: #fdfdfd;
+    border: 1px solid #eaeaea;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.meal-time-label {
+    color: white;
+    text-align: center;
+    font-weight: bold;
+    padding: 8px 0;
+    font-size: 1.1rem;
+}
+
+/* 時間帯ごとのカラー設定 */
+.meal-time-label.morning { background: var(--morning-color); }
+.meal-time-label.lunch { background: var(--lunch-color); }
+.meal-time-label.dinner { background: var(--dinner-color); }
+
+.meal-img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    border-bottom: 1px solid #eee;
+}
+
+.meal-details {
+    padding: 15px;
+    font-size: 0.95rem;
+    color: #444;
+    flex-grow: 1;
+}
+
+.meal-details p {
+    margin: 0 0 8px 0;
+    line-height: 1.4;
+}
+
+/* 記録がない場合のスタイル */
+.empty-meal {
+    padding: 40px 20px;
+    text-align: center;
+    color: #aaa;
+    background: #f9f9f9;
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 150px;
+}
+
+/* 右下のフローティング追加ボタン */
+.fab-add {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 65px;
+    height: 65px;
+    background: #e67e22; /* 食事ページのテーマカラー */
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 35px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    z-index: 99;
+    transition: transform 0.2s;
+}
+
+.fab-add:hover {
+    transform: scale(1.1);
+    color: white;
+}
+
+/* スマホ向けのレスポンシブ対応 */
+@media (max-width: 768px) {
+    .meal-grid {
+        grid-template-columns: 1fr; /* スマホでは縦1列に並ぶ */
+    }
+    .date-header {
+        text-align: center;
+    }
+}
+
+/* --- 食事記録フォーム用スタイル (meal.css に追記) --- */
+
+.form-card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    max-width: 600px;
+    margin: 0 auto; /* 画面の中央に配置 */
+}
+
+.styled-form .form-group {
+    margin-bottom: 20px;
+}
+
+.styled-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #444;
+}
+
+/* 入力欄のデザイン */
+.styled-form input[type="date"],
+.styled-form select,
+.styled-form textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+    box-sizing: border-box;
+    background: #fafafa;
+    transition: border-color 0.2s;
+    font-family: inherit;
+}
+
+.styled-form input:focus,
+.styled-form select:focus,
+.styled-form textarea:focus {
+    outline: none;
+    border-color: #e67e22; /* 食事テーマのオレンジ */
+    background: #fff;
+}
+
+/* ファイルアップロードのデザインを少しオシャレに */
+.styled-form input[type="file"] {
+    padding: 10px;
+    background: #f1f5f9;
+    border: 1px dashed #cbd5e1;
+    cursor: pointer;
+}
+
+/* ボタン群 */
+.button-group {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.btn-primary {
+    flex: 2;
+    background: #e67e22;
+    color: white;
+    border: none;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-primary:hover {
+    background: #d35400;
+}
+
+.btn-back {
+    flex: 1;
+    background: #ecf0f1;
+    color: #7f8c8d;
+    text-align: center;
+    padding: 15px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.btn-back:hover {
+    background: #bdc3c7;
+}

@@ -67,3 +67,11 @@ CREATE TABLE machines (
     target_muscle TEXT NOT NULL, -- 胸、背中、脚など
     FOREIGN KEY (gym_id) REFERENCES gyms (id)
 );
+
+CREATE TABLE IF NOT EXISTS custom_exercises (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    muscle_group TEXT NOT NULL,
+    name TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users (id)
+);
