@@ -1,6 +1,6 @@
 import os
-import sqlite3
-import click
+import psycopg2
+import psycopg2.extras
 from datetime import datetime
 from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, g, flash, session
@@ -14,26 +14,26 @@ from google import genai
 app = Flask(__name__)
 app.secret_key = 'your-very-secret-key-that-no-one-can-guess'
 
-# Gemini APIの設定 (最新の google-genai SDK)
+# Gemini APIの設定
 gemini_api_key = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=gemini_api_key) if gemini_api_key else None
 
-# データベースとアップロード先の設定
-data_dir = os.environ.get('RENDER_DISK_MOUNT_PATH', 'instance')
-app.config['DATABASE'] = os.path.join(data_dir, 'diet.db')
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
+# Supabase(PostgreSQL)の接続URLを環境変数から取得
+# ローカル検証時は直接取得したURI文字列をデフォルト値に入れても動きます
+# 【修正後】パスワードの直書きを消し、Renderの環境変数からのみ読み込むようにする
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
-# 起動時にアップロードフォルダを作成
+app.config['UPLOAD_FOLDER'] = 'static/uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 
 # ==========================================
-# 2. データベース管理
+# 2. データベース管理 (PostgreSQL / psycopg2)
 # ==========================================
 def get_db():
     if 'db' not in g:
-        g.db = sqlite3.connect(app.config['DATABASE'], detect_types=sqlite3.PARSE_DECLTYPES)
-        g.db.row_factory = sqlite3.Row
+        # 辞書型(Row風)で結果を取得できるRealDictCursorを指定して接続
+        g.db = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
     return g.db
 
 @app.teardown_appcontext
@@ -41,21 +41,6 @@ def close_db(e=None):
     db = g.pop('db', None)
     if db is not None:
         db.close()
-
-def init_db():
-    db_path = app.config['DATABASE']
-    db_dir = os.path.dirname(db_path)
-    os.makedirs(db_dir, exist_ok=True)
-
-    db = get_db()
-    with app.open_resource('schema.sql') as f:
-        db.executescript(f.read().decode('utf8'))
-
-@app.cli.command('init-db')
-def init_db_command():
-    """データベースをクリアし、新しいテーブルを作成します。"""
-    init_db()
-    click.echo('データベースの初期化が完了しました。')
 
 
 # ==========================================
@@ -67,7 +52,9 @@ def load_logged_in_user():
     if user_id is None:
         g.user = None
     else:
-        g.user = get_db().execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
+        with get_db().cursor() as cursor:
+            cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))
+            g.user = cursor.fetchone()
 
 def login_required(view):
     @wraps(view)
@@ -90,13 +77,17 @@ def register():
             error = 'ユーザー名は必須です。'
         elif not password: 
             error = 'パスワードは必須です。'
-        elif db.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone() is not None:
-            error = f"ユーザー名 {username} は既に使用されています。"
+        
+        with db.cursor() as cursor:
+            cursor.execute('SELECT id FROM users WHERE username = %s', (username,))
+            if cursor.fetchone() is not None:
+                error = f"ユーザー名 {username} は既に使用されています。"
 
         if error is None:
-            db.execute('INSERT INTO users (username, password_hash) VALUES (?, ?)', 
-                       (username, generate_password_hash(password)))
-            db.commit()
+            with db.cursor() as cursor:
+                cursor.execute('INSERT INTO users (username, password_hash) VALUES (%s, %s)', 
+                               (username, generate_password_hash(password)))
+            db.commit() # クライアント・サーバー型のため明示的なコミットが必要
             flash('登録が完了しました。ログインしてください。')
             return redirect(url_for('login'))
         flash(error)
@@ -109,7 +100,10 @@ def login():
         password = request.form.get('password')
         db = get_db()
         error = None
-        user = db.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+        
+        with db.cursor() as cursor:
+            cursor.execute('SELECT * FROM users WHERE username = %s', (username,))
+            user = cursor.fetchone()
 
         if user is None:
             error = 'ユーザー名が正しくありません。'
@@ -132,7 +126,7 @@ def logout():
 
 
 # ==========================================
-# 4. メイン機能（ダッシュボード・各種記録）
+# 4. メイン機能
 # ==========================================
 @app.route('/')
 def index():
@@ -144,21 +138,16 @@ def mypage():
     db = get_db()
     user_id = g.user['id']
     
-    # 登録されているマイジムを取得
-    gyms = db.execute('SELECT * FROM gyms WHERE user_id = ?', (user_id,)).fetchall()
-    
-    # 最新の体重を取得
-    latest_weight = db.execute(
-        'SELECT weight FROM weights WHERE user_id = ? ORDER BY date DESC LIMIT 1',
-        (user_id,)
-    ).fetchone()
-    current_weight = latest_weight['weight'] if latest_weight else '未記録'
-    
-    # トレーニングした日付を取得(重複なし)
-    training_dates = db.execute(
-        'SELECT DISTINCT date FROM training_sessions WHERE user_id = ? ORDER BY date DESC',
-        (user_id,)
-    ).fetchall()
+    with db.cursor() as cursor:
+        cursor.execute('SELECT * FROM gyms WHERE user_id = %s', (user_id,))
+        gyms = cursor.fetchall()
+        
+        cursor.execute('SELECT weight FROM weights WHERE user_id = %s ORDER BY date DESC LIMIT 1', (user_id,))
+        latest_weight = cursor.fetchone()
+        current_weight = latest_weight['weight'] if latest_weight else '未記録'
+        
+        cursor.execute('SELECT DISTINCT date FROM training_sessions WHERE user_id = %s ORDER BY date DESC', (user_id,))
+        training_dates = cursor.fetchall()
     
     return render_template('mypage.html', gyms=gyms, current_weight=current_weight, training_dates=training_dates)
 
@@ -175,16 +164,28 @@ def weight_page():
         date_str = request.form.get("date")
         
         full_datetime = f"{date_str} {datetime.now().strftime('%H:%M:%S')}"
-        db.execute(
-            'INSERT INTO weights (user_id, date, weight) VALUES (?, ?, ?)',
-            (user_id, full_datetime, float(weight_str))
-        )
+        with db.cursor() as cursor:
+            cursor.execute(
+                'INSERT INTO weights (user_id, date, weight) VALUES (%s, %s, %s)',
+                (user_id, full_datetime, float(weight_str))
+            )
         db.commit()
         flash('体重を記録しました!')
         return redirect(url_for('weight_page'))
 
-    # 前日比の計算
-    weight_records_asc = db.execute('SELECT date, weight FROM weights WHERE user_id = ? ORDER BY date ASC', (user_id,)).fetchall()
+    with db.cursor() as cursor:
+        cursor.execute('SELECT date, weight FROM weights WHERE user_id = %s ORDER BY date ASC', (user_id,))
+        weight_records_asc = cursor.fetchall()
+        
+        # PostgreSQL用に集計関数とGROUP BYを厳密化
+        cursor.execute('''
+            SELECT TO_CHAR(date, 'YYYY-MM-DD') as day, MIN(weight) as min_weight 
+            FROM weights WHERE user_id = %s 
+            GROUP BY TO_CHAR(date, 'YYYY-MM-DD') 
+            ORDER BY day
+        ''', (user_id,))
+        graph_data = cursor.fetchall()
+
     records_with_diff = []
     for i, record in enumerate(weight_records_asc):
         record_dict = dict(record)
@@ -196,8 +197,6 @@ def weight_page():
         records_with_diff.append(record_dict)
     records_with_diff.reverse()
 
-    # グラフ用データ
-    graph_data = db.execute('SELECT STRFTIME("%Y-%m-%d", date) as day, MIN(weight) as min_weight FROM weights WHERE user_id = ? GROUP BY day ORDER BY day', (user_id,)).fetchall()
     dates = [row['day'] for row in graph_data]
     weights = [row['min_weight'] for row in graph_data]
     
@@ -210,7 +209,9 @@ def weight_page():
 def meal_page():
     user_id = g.user['id']
     db = get_db()
-    meals = db.execute('SELECT * FROM meals WHERE user_id = ? ORDER BY date DESC, id DESC', (user_id,)).fetchall()
+    with db.cursor() as cursor:
+        cursor.execute('SELECT * FROM meals WHERE user_id = %s ORDER BY date DESC, id DESC', (user_id,))
+        meals = cursor.fetchall()
     return render_template('meal.html', meals=meals)
 
 @app.route('/meal_form')
@@ -235,10 +236,11 @@ def add_meal():
         photo.save(photo_path)
     
     db = get_db()
-    db.execute(
-        'INSERT INTO meals (user_id, date, time_slot, content, ingredients, image_path) VALUES (?, ?, ?, ?, ?, ?)',
-        (user_id, date, time_slot, content, ingredients, photo_path)
-    )
+    with db.cursor() as cursor:
+        cursor.execute(
+            'INSERT INTO meals (user_id, date, time_slot, content, ingredients, image_path) VALUES (%s, %s, %s, %s, %s, %s)',
+            (user_id, date, time_slot, content, ingredients, photo_path)
+        )
     db.commit()
     flash('食事を記録しました！')
     return redirect(url_for('meal_page'))
@@ -252,7 +254,6 @@ def training_page():
     user_id = g.user['id']
     today = datetime.now().strftime('%Y-%m-%d')
 
-    # マスターデータ
     exercise_master = {
         "胸": ["ベンチプレス", "ペックフライ", "チェストプレス"],
         "背中": ["デッドリフト", "ラットプルダウン", "プーリーロー"],
@@ -262,24 +263,24 @@ def training_page():
         "腹": ["クランチ", "プランク"]
     }
 
-    # ユーザー追加のカスタム種目を合体
-    customs = db.execute('SELECT muscle_group, name FROM custom_exercises WHERE user_id = ?', (user_id,)).fetchall()
+    with db.cursor() as cursor:
+        cursor.execute('SELECT muscle_group, name FROM custom_exercises WHERE user_id = %s', (user_id,))
+        customs = cursor.fetchall()
+    
     for row in customs:
         if row['muscle_group'] in exercise_master:
             if row['name'] not in exercise_master[row['muscle_group']]:
                 exercise_master[row['muscle_group']].append(row['name'])
 
     if request.method == 'POST':
-        # 新しいカスタム種目の追加
         if request.form.get('new_exercise_name'):
             new_name = request.form.get('new_exercise_name')
             part = request.form.get('muscle_group')
-            db.execute('INSERT INTO custom_exercises (user_id, muscle_group, name) VALUES (?, ?, ?)', (user_id, part, new_name))
+            with db.cursor() as cursor:
+                cursor.execute('INSERT INTO custom_exercises (user_id, muscle_group, name) VALUES (%s, %s, %s)', (user_id, part, new_name))
             db.commit()
             flash(f"「{new_name}」を新しく追加しました！")
             return redirect(url_for('training_page'))
-
-        # トレーニングの記録
         else:
             date = request.form.get('date')
             part = request.form.get('muscle_group')
@@ -288,39 +289,44 @@ def training_page():
             reps = request.form.getlist('reps[]')
 
             if part and event:
-                cursor = db.execute(
-                    'INSERT INTO training_sessions (user_id, date, part, event) VALUES (?, ?, ?, ?)',
-                    (user_id, date, part, event)
-                )
-                session_id = cursor.lastrowid
-                
-                for w, r in zip(weights, reps):
-                    if w and r:
-                        db.execute(
-                            'INSERT INTO training_sets (session_id, weight, reps) VALUES (?, ?, ?)',
-                            (session_id, float(w), int(r))
-                        )
+                with db.cursor() as cursor:
+                    # RETURNING id を使ってシリアル値を取得
+                    cursor.execute(
+                        'INSERT INTO training_sessions (user_id, date, part, event) VALUES (%s, %s, %s, %s) RETURNING id',
+                        (user_id, date, part, event)
+                    )
+                    session_id = cursor.fetchone()['id']
+                    
+                    for w, r in zip(weights, reps):
+                        if w and r:
+                            cursor.execute(
+                                'INSERT INTO training_sets (session_id, weight, reps) VALUES (%s, %s, %s)',
+                                (session_id, float(w), int(r))
+                            )
                 db.commit()
                 flash("トレーニングを記録しました！")
             return redirect(url_for('training_page'))
 
-    # GET時のデータ取得
-    stats = db.execute('''
-        SELECT COUNT(DISTINCT event) as events, COUNT(*) as sets, SUM(reps) as reps 
-        FROM training_sessions s JOIN training_sets t ON s.id = t.session_id 
-        WHERE s.user_id = ? AND s.date = ?''', (user_id, today)
-    ).fetchone()
+    with db.cursor() as cursor:
+        cursor.execute('''
+            SELECT COUNT(DISTINCT event) as events, COUNT(*) as sets, SUM(reps) as reps 
+            FROM training_sessions s JOIN training_sets t ON s.id = t.session_id 
+            WHERE s.user_id = %s AND s.date = %s''', (user_id, today))
+        stats = cursor.fetchone()
 
-    raw_sessions = db.execute('SELECT * FROM training_sessions WHERE user_id = ? ORDER BY date DESC', (user_id,)).fetchall()
-    sessions = []
-    for s in raw_sessions:
-        sets = db.execute('SELECT weight, reps FROM training_sets WHERE session_id = ?', (s['id'],)).fetchall()
-        sessions.append({
-            'date': s['date'],
-            'muscle_group': s['part'],
-            'exercise_name': s['event'],
-            'sets': sets
-        })
+        cursor.execute('SELECT * FROM training_sessions WHERE user_id = %s ORDER BY date DESC', (user_id,))
+        raw_sessions = cursor.fetchall()
+        
+        sessions = []
+        for s in raw_sessions:
+            cursor.execute('SELECT weight, reps FROM training_sets WHERE session_id = %s', (s['id'],))
+            sets = cursor.fetchall()
+            sessions.append({
+                'date': s['date'],
+                'muscle_group': s['part'],
+                'exercise_name': s['event'],
+                'sets': sets
+            })
 
     return render_template('training.html', master=exercise_master, stats=stats, today=today, sessions=sessions)
 
@@ -340,17 +346,20 @@ def gym_register():
         longitude = request.form.get('longitude')
 
         if gym_name and latitude and longitude:
-            db.execute(
-                'INSERT INTO gyms (user_id, name, latitude, longitude) VALUES (?, ?, ?, ?)',
-                (user_id, gym_name, latitude, longitude)
-            )
+            with db.cursor() as cursor:
+                cursor.execute(
+                    'INSERT INTO gyms (user_id, name, latitude, longitude) VALUES (%s, %s, %s, %s)',
+                    (user_id, gym_name, float(latitude), float(longitude))
+                )
             db.commit()
             flash(f"「{gym_name}」をマイジムに登録しました！")
             return redirect(url_for('gym_register'))
         else:
             flash("正しく位置情報が取得できませんでした。もう一度お試しください。")
 
-    gyms = db.execute('SELECT * FROM gyms WHERE user_id = ? ORDER BY id DESC', (user_id,)).fetchall()
+    with db.cursor() as cursor:
+        cursor.execute('SELECT * FROM gyms WHERE user_id = %s ORDER BY id DESC', (user_id,))
+        gyms = cursor.fetchall()
     return render_template('gym_register.html', gyms=gyms)
 
 
@@ -360,13 +369,17 @@ def gym_detail(gym_id):
     db = get_db()
     user_id = g.user['id']
 
-    gym = db.execute('SELECT * FROM gyms WHERE id = ? AND user_id = ?', (gym_id, user_id)).fetchone()
+    with db.cursor() as cursor:
+        cursor.execute('SELECT * FROM gyms WHERE id = %s AND user_id = %s', (gym_id, user_id))
+        gym = cursor.fetchone()
     
     if gym is None:
         flash('指定されたジムが見つからないか、アクセス権がありません。')
         return redirect(url_for('mypage'))
 
-    machines = db.execute('SELECT * FROM machines WHERE gym_id = ? ORDER BY target_muscle, id DESC', (gym_id,)).fetchall()
+    with db.cursor() as cursor:
+        cursor.execute('SELECT * FROM machines WHERE gym_id = %s ORDER BY target_muscle, id DESC', (gym_id,))
+        machines = cursor.fetchall()
     return render_template('gym_detail.html', gym=gym, machines=machines)
 
 
@@ -379,11 +392,14 @@ def add_machine(gym_id):
     machine_name = request.form.get('machine_name')
     target_muscle = request.form.get('target_muscle')
 
-    gym = db.execute('SELECT id FROM gyms WHERE id = ? AND user_id = ?', (gym_id, user_id)).fetchone()
+    with db.cursor() as cursor:
+        cursor.execute('SELECT id FROM gyms WHERE id = %s AND user_id = %s', (gym_id, user_id))
+        gym = cursor.fetchone()
 
     if gym and machine_name and target_muscle:
-        db.execute('INSERT INTO machines (gym_id, name, target_muscle) VALUES (?, ?, ?)',
-                   (gym_id, machine_name, target_muscle))
+        with db.cursor() as cursor:
+            cursor.execute('INSERT INTO machines (gym_id, name, target_muscle) VALUES (%s, %s, %s)',
+                           (gym_id, machine_name, target_muscle))
         db.commit()
         flash(f'「{machine_name}」を登録しました！')
     else:
@@ -398,11 +414,13 @@ def delete_gym(gym_id):
     db = get_db()
     user_id = g.user['id']
 
-    gym = db.execute('SELECT * FROM gyms WHERE id = ? AND user_id = ?', (gym_id, user_id)).fetchone()
+    with db.cursor() as cursor:
+        cursor.execute('SELECT * FROM gyms WHERE id = %s AND user_id = %s', (gym_id, user_id))
+        gym = cursor.fetchone()
     
     if gym:
-        db.execute('DELETE FROM machines WHERE gym_id = ?', (gym_id,))
-        db.execute('DELETE FROM gyms WHERE id = ?', (gym_id,))
+        with db.cursor() as cursor:
+            cursor.execute('DELETE FROM gyms WHERE id = %s', (gym_id,))
         db.commit()
         flash(f'「{gym["name"]}」を削除しました。')
     else:
@@ -420,7 +438,9 @@ def recommend_page():
     db = get_db()
     user_id = g.user['id']
     
-    gyms = db.execute('SELECT * FROM gyms WHERE user_id = ?', (user_id,)).fetchall()
+    with db.cursor() as cursor:
+        cursor.execute('SELECT * FROM gyms WHERE user_id = %s', (user_id,))
+        gyms = cursor.fetchall()
     recommendation = None
 
     if request.method == 'POST':
@@ -428,10 +448,12 @@ def recommend_page():
         target_muscle = request.form.get('target_muscle')
         time_minutes = request.form.get('time_minutes')
 
-        machines = db.execute(
-            'SELECT name FROM machines WHERE gym_id = ? AND target_muscle = ?',
-            (gym_id, target_muscle)
-        ).fetchall()
+        with db.cursor() as cursor:
+            cursor.execute(
+                'SELECT name FROM machines WHERE gym_id = %s AND target_muscle = %s',
+                (int(gym_id), target_muscle)
+            )
+            machines = cursor.fetchall()
 
         if not machines:
             flash(f'そのジムには「{target_muscle}」用のマシンが登録されていません。')
@@ -468,8 +490,5 @@ def recommend_page():
 
     return render_template('recommend.html', gyms=gyms, recommendation=recommendation)
 
-# ==========================================
-# アプリケーションの実行
-# ==========================================
 if __name__ == "__main__":
     app.run(debug=True)
