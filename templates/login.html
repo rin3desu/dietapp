@@ -1,6 +1,6 @@
 {% extends 'layout.html' %}
 
-{% block title %}ログイン - Diet App{% endblock %}
+{% block title %}ログイン - STOIQ{% endblock %}
 
 {% block body_attributes %}
     class="page-background" style="background-color: #050505; background-image: url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070'); background-blend-mode: overlay; background-position: center; background-size: cover;"
@@ -10,7 +10,7 @@
 <div class="auth-wrapper">
     <div class="neon-auth-container">
         <h1 class="neon-title">LOGIN</h1>
-        <p class="neon-subtitle">Welcome back to Diet App</p>
+        <p class="neon-subtitle">Welcome back to STOIQ</p>
 
         {% with messages = get_flashed_messages() %}
           {% if messages %}
@@ -23,6 +23,7 @@
         {% endwith %}
 
         <form action="{{ url_for('login') }}" method="POST" class="neon-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label for="username"><i class="fas fa-user"></i> Username</label>
                 <input type="text" id="username" name="username" placeholder="ユーザー名を入力" required>

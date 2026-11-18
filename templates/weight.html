@@ -1,6 +1,6 @@
 {% extends 'layout.html' %}
 
-{% block title %}体重記録 - Diet App{% endblock %}
+{% block title %}体重記録 - STOIQ{% endblock %}
 
 {% block body_attributes %}
     class="page-background" style="background-image: url('https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=2120');"
@@ -16,6 +16,7 @@
                 <i class="fas fa-plus-circle"></i> 今日の記録を追加
             </div>
             <form action="{{ url_for('weight_page') }}" method="post" class="styled-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                     <label for="date">記録日</label>
                     <input type="date" id="date" name="date" required value="{{ today }}">

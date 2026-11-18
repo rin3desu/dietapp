@@ -1,6 +1,6 @@
 {% extends 'layout.html' %}
 
-{% block title %}マイジム登録 - Diet App{% endblock %}
+{% block title %}マイジム登録 - STOIQ{% endblock %}
 
 {% block body_attributes %}
     class="page-background" style="background-image: url('https://images.unsplash.com/photo-1576678927484-cc907957088c?q=80&w=2070'); background-position: center;"
@@ -20,6 +20,7 @@
             </div>
             
             <form action="{{ url_for('gym_register') }}" method="POST" class="styled-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group" style="margin-bottom: 20px;">
                     <label for="gym_name" style="display: block; margin-bottom: 8px; font-weight: bold; color: #444;">ジムの名前</label>
                     <input type="text" id="gym_name" name="gym_name" placeholder="例: エニタイムフィットネス 名古屋店" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">

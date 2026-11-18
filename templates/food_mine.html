@@ -1,0 +1,3 @@
+{% extends 'layout.html' %}
+{% block title %}自分のAIレシピ — STOIQ{% endblock %}
+{% block content %}<div class="stoiq-page"><span class="eyebrow">MY RECIPE NOTES</span><header class="s-page-heading"><div><h1>自分のAIレシピ。</h1><p>提案を残し、実際につくって、自分の一皿へ。</p></div><a class="s-button" href="{{ url_for('food.catalogue') }}#pantry">新しいレシピを提案する ↗</a></header><div class="recipe-grid">{% for recipe in recipes %}<div><p class="s-fineprint">{{ '公開中' if recipe.published else '自分だけの下書き' }}</p>{% include '_recipe_card.html' %}</div>{% else %}<section class="s-panel s-empty"><h2>まだレシピはありません。</h2><p>手元の食材を入力して、最初の提案を受け取ってみよう。</p><a class="s-button outline" href="{{ url_for('food.catalogue') }}#pantry">食材からAI提案する →</a></section>{% endfor %}</div></div>{% endblock %}

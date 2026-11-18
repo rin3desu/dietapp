@@ -6,6 +6,13 @@ __pycache__/
 # Virtual Environments
 venv/
 .venv/
+.venv-1/
+.qa-deps/
+.env
+.env.local
+instance/
+.pytest_cache/
+static/uploads/
 
 # Databases
 *.sqlite3

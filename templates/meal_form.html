@@ -1,6 +1,6 @@
 {% extends 'layout.html' %}
 
-{% block title %}食事記録フォーム - Diet App{% endblock %}
+{% block title %}食事記録フォーム - STOIQ{% endblock %}
 
 {% block body_attributes %}
     class="page-background" style="background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1780');"
@@ -14,6 +14,7 @@
 
     <div class="form-card">
         <form action="{{ url_for('add_meal') }}" method="post" enctype="multipart/form-data" class="styled-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             
             <div class="form-group">
                 <label for="date"><i class="far fa-calendar-alt"></i> 日付</label>

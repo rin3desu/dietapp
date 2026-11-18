@@ -7,12 +7,15 @@ from flask import Flask, render_template, request, redirect, url_for, g, flash, 
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from google import genai
+from security import configure_app, install_security
+from stoic_db import connect
 
 # ==========================================
 # 1. アプリケーションの初期化
 # ==========================================
 app = Flask(__name__)
-app.secret_key = 'your-very-secret-key-that-no-one-can-guess'
+configure_app(app)
+install_security(app)
 
 # Gemini APIの設定
 gemini_api_key = os.environ.get("GEMINI_API_KEY")
@@ -33,7 +36,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 def get_db():
     if 'db' not in g:
         # 辞書型(Row風)で結果を取得できるRealDictCursorを指定して接続
-        g.db = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+        g.db = connect(app.config)
     return g.db
 
 @app.teardown_appcontext
@@ -179,9 +182,9 @@ def weight_page():
         
         # PostgreSQL用に集計関数とGROUP BYを厳密化
         cursor.execute('''
-            SELECT TO_CHAR(date, 'YYYY-MM-DD') as day, MIN(weight) as min_weight 
+            SELECT substr(CAST(date AS TEXT), 1, 10) as day, MIN(weight) as min_weight
             FROM weights WHERE user_id = %s 
-            GROUP BY TO_CHAR(date, 'YYYY-MM-DD') 
+            GROUP BY substr(CAST(date AS TEXT), 1, 10)
             ORDER BY day
         ''', (user_id,))
         graph_data = cursor.fetchall()
@@ -450,8 +453,8 @@ def recommend_page():
 
         with db.cursor() as cursor:
             cursor.execute(
-                'SELECT name FROM machines WHERE gym_id = %s AND target_muscle = %s',
-                (int(gym_id), target_muscle)
+                'SELECT m.name FROM machines m JOIN gyms gy ON gy.id=m.gym_id WHERE m.gym_id=%s AND m.target_muscle=%s AND gy.user_id=%s',
+                (int(gym_id), target_muscle, user_id)
             )
             machines = cursor.fetchall()
 
@@ -481,14 +484,20 @@ def recommend_page():
 
             try:
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash', 
+                    model=app.config['GEMINI_MODEL'],
                     contents=prompt
                 )
                 recommendation = response.text
             except Exception as e:
-                flash(f"AIの生成中にエラーが発生しました: {e}")
+                flash("AIメニューを作成できませんでした。接続設定と利用枠を確認してください。")
 
     return render_template('recommend.html', gyms=gyms, recommendation=recommendation)
+
+from food import food
+from growth import growth
+app.config['GET_DB'] = get_db
+app.register_blueprint(food)
+app.register_blueprint(growth)
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1,6 +1,6 @@
 {% extends 'layout.html' %}
 
-{% block title %}{{ gym['name'] }} のマシン管理 - Diet App{% endblock %}
+{% block title %}{{ gym['name'] }} のマシン管理 - STOIQ{% endblock %}
 
 {% block body_attributes %}
     class="page-background" style="background-image: url('https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=2070'); background-position: center;"
@@ -21,6 +21,7 @@
             </div>
             
             <form action="{{ url_for('add_machine', gym_id=gym['id']) }}" method="POST" class="styled-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group" style="margin-bottom: 15px;">
                     <label for="machine_name" style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">マシンの名前</label>
                     <input type="text" name="machine_name" id="machine_name" placeholder="例: チェストプレス" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;">
