@@ -64,6 +64,19 @@ def connect(config):
 def migrate(config):
     db = connect(config)
     try:
+        if isinstance(db, SQLiteConnection):
+            if config.get('BACKUP_LEGACY_SQLITE'):
+                tables = {r[0] for r in db.raw.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+                backup_path = Path(config['SQLITE_PATH'] + '.before-stoiq.sqlite3')
+                if 'users' in tables and 'growth_challenges' not in tables and not backup_path.exists():
+                    backup = sqlite3.connect(backup_path)
+                    try:
+                        db.raw.backup(backup)
+                    finally:
+                        backup.close()
+                    backup_path.chmod(0o600)
+            db.raw.execute('PRAGMA journal_mode=WAL')
+            db.raw.execute('BEGIN IMMEDIATE')
         sql = (Path(__file__).parent / 'migrations' / '001_stoiq.sql').read_text(encoding='utf-8')
         if isinstance(db, SQLiteConnection):
             sql = sql.replace('SERIAL PRIMARY KEY', 'INTEGER PRIMARY KEY AUTOINCREMENT')

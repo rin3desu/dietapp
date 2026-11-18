@@ -154,6 +154,13 @@ def logout():
 def index():
     return render_template('index.html')
 
+
+@app.get('/health')
+def health():
+    ready = app.config.get('DATABASE_READY') is not False
+    return {'status': 'ok' if ready else 'degraded', 'database_ready': ready,
+            'ai_configured': bool(app.config.get('GEMINI_API_KEY'))}, 200 if ready else 503
+
 @app.route('/mypage')
 @login_required
 def mypage():
@@ -442,6 +449,7 @@ def delete_gym(gym_id):
     
     if gym:
         with db.cursor() as cursor:
+            cursor.execute('DELETE FROM machines WHERE gym_id = %s', (gym_id,))
             cursor.execute('DELETE FROM gyms WHERE id = %s', (gym_id,))
         db.commit()
         flash(f'「{gym["name"]}」を削除しました。')

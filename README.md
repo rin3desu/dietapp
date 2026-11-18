@@ -4,6 +4,8 @@
 
 公開先：[dietinfo.onrender.com](https://dietinfo.onrender.com)（旧DietInfoと同じURLを利用）。旧READMEの開発背景・記録は [docs/dietapp-history.md](docs/dietapp-history.md) に保存しています。
 
+現在の公開環境は、既存Renderの永続ディスクにあるSQLite `/var/data/stoiq/app.db` を使う構成です。利用できなくなった旧Supabase接続先は設定を残し、新DBへ明示的に切り替えています。新しい保存先は初期状態から開始し、旧ローカルDBの記録は自動送信・自動移行していません。
+
 ## 今回の変更
 
 - トップ → 食事・レシピページ `/food`。5件のオリジナルレシピ、食材のAND検索・表記ゆれ対応、減量／筋づくり目的の絞り込み、材料・手順ページ。
@@ -32,19 +34,20 @@ python -m flask --app app run --port 5001
 
 | 環境変数 | 用途 |
 | --- | --- |
-| `DATABASE_URL` | 公開環境の既存PostgreSQL接続先。既存値を維持 |
+| `DATABASE_BACKEND` | 現在の公開先は `sqlite`。PostgreSQLを使う場合は `postgres` |
+| `DATABASE_URL` | PostgreSQL接続先。`DATABASE_BACKEND=sqlite` の場合は使用せず、環境変数の旧値も削除しません |
 | `SECRET_KEY` | 本番セッション署名用のランダムな秘密値。設定を推奨。未設定時、現在のRenderは既存の永続ディスク `/var/data/stoiq/.session-key` に、ローカルは `instance/.session-key` に自動作成。永続ディスクもない公開環境では起動を拒否 |
 | `SESSION_KEY_FILE` | 別の永続ディスクにセッションキーを保存する場合の絶対パス（任意） |
 | `GEMINI_API_KEY` | dietappが利用しているGeminiキー。未設定時はAI提案を無効表示し、掲載レシピの検索は利用可能 |
 | `GEMINI_MODEL` | 既存の `gemini-2.5-flash` を既定値として維持。アカウントで利用できるモデルに変更可能 |
 | `AI_DAILY_LIMIT` | AIレシピの1ユーザー1日あたり呼び出し上限。既定10回。失敗した呼び出しも数えます |
 | `PUBLIC_ORIGIN` | 公開URLのオリジン（例 `https://example.onrender.com`）。独自ドメイン使用時は設定 |
-| `SQLITE_PATH` | ローカル開発用の別DBパス（任意。本番PostgreSQL設定時は不使用） |
+| `SQLITE_PATH` | 現在の公開先は `/var/data/stoiq/app.db`。公開SQLiteは `/var/data` 内に限定。ローカルは既定 `instance/stoiq-local.db` |
 
 ## 既存の公開サイトへの反映
 
-1. 既存PostgreSQLのバックアップを取得します。
-2. 現在のRenderサービスの `DATABASE_URL`・`GEMINI_API_KEY` を維持し、セッションキーの保存先を確認します。現在のDietInfoサービスは既存の `/var/data` 永続ディスクを利用でき、`SECRET_KEY` 未設定時はその中に秘密のランダムキーを自動保存します。キーの再発行や新サービス作成は不要です。
+1. 使用中のDBをバックアップします。旧SQLiteを初めて統合する場合は、マイグレーション前に `.before-stoiq.sqlite3` のバックアップを自動作成します。
+2. 現在のRenderサービスの `DATABASE_BACKEND=sqlite`、`SQLITE_PATH=/var/data/stoiq/app.db`、既存 `GEMINI_API_KEY` を維持し、セッションキーの保存先を確認します。現在のDietInfoサービスは既存の `/var/data` 永続ディスクを利用でき、`SECRET_KEY` 未設定時はその中に秘密のランダムキーを自動保存します。キーの再発行や新サービス作成は不要です。
 3. GitHubに変更を反映します。既存のBuild Command **`bash build.sh`**、Start Command **`python -m gunicorn app:app`** はそのまま利用でき、`gunicorn.conf.py` が自動読み込みされます。
 4. `gunicorn.conf.py` の起動フックが、ワーカー起動前にマイグレーションを実行します。`bash start.sh` を使う起動方法も用意しています。追加テーブルのみを作り、既存のテーブル・記録は削除しません。旧 `schema.sql` はDROPを含むため使用しないでください。
 5. デプロイ後、公開URLでレシピ5件、ログイン、ジム・マシン、AIレシピ提案、保存・公開、成長記録を確認します。PCの電源を切っても、公開サーバーが稼働していればスマホから利用できます。
@@ -53,7 +56,7 @@ python -m flask --app app run --port 5001
 
 ## データベースへ接続できないとき
 
-DB接続が失敗してもトップと初期5レシピ・食材検索は利用できます。アカウント・記録・AI提案の保存は503と案内を返し、別のDBへの自動切替や空の記録への置き換えはしません。DB復旧後の記録機能アクセス時に追加テーブルの作成を再試行します。永続ディスクに残る旧SQLiteについては、ファイル名・件数・互換性のみを非公開のRenderログに診断表示し、レコード本文は表示・変更しません。
+DB接続が失敗してもトップと初期5レシピ・食材検索は利用できます。アカウント・記録・AI提案の保存は503と案内を返し、接続エラーを契機にした自動DB切替や空の記録への置き換えはしません。保存先の切替は管理者が環境変数で明示的に指定した場合のみ行います。DB復旧後の記録機能アクセス時に追加テーブルの作成を再試行します。永続ディスクに残る旧SQLiteについては、ファイル名・件数・互換性のみを非公開のRenderログに診断表示し、レコード本文は表示・変更しません。
 
 ## BECOMEの既存記録を引き継ぐ
 
@@ -74,7 +77,7 @@ python -m pip install pytest
 python -m pytest -q tests
 ```
 
-ローカルSQLiteで16件成功・PostgreSQL専用1件をスキップ、独立したローカルPostgreSQL 16で17件すべて成功を確認しました。テストはGeminiのモックを使用し、実際のAI利用料金は発生しません。実APIの成功や公開中のPostgreSQLへの接続は未検証です。
+ローカルSQLiteで18件成功・PostgreSQL専用1件をスキップ、独立したローカルPostgreSQL 16で19件すべて成功を確認しました。テストはGeminiのモックを使用し、実際のAI利用料金は発生しません。実APIの成功や公開中のPostgreSQLへの接続は未検証です。
 
 PostgreSQLのテストは、専用のローカルクラスタ（127.0.0.1:55439、ユーザーstoiq_qa）を起動し、`STOIQ_TEST_POSTGRES_URL` を指定したときだけ実行できます。テストごとに専用スキーマを作成・削除します。本番データベースは使用できないよう接続先を制限しています。
 

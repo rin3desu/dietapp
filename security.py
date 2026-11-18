@@ -5,18 +5,31 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from flask import abort, jsonify, request, session
 
+RENDER_DATA_ROOT = Path('/var/data')
 
 def configure_app(app):
     app.config.update(DATABASE_URL=os.getenv('DATABASE_URL'), SQLITE_PATH=os.getenv('SQLITE_PATH', str(Path(app.instance_path) / 'stoiq-local.db')), GEMINI_API_KEY=os.getenv('GEMINI_API_KEY'), GEMINI_MODEL=os.getenv('GEMINI_MODEL', 'gemini-2.5-flash'), AI_DAILY_LIMIT=int(os.getenv('AI_DAILY_LIMIT', '10')), MAX_CONTENT_LENGTH=6 * 1024 * 1024, SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax', SESSION_COOKIE_SECURE=bool(os.getenv('RENDER') or os.getenv('PUBLIC_ORIGIN', '').startswith('https://')))
-    if os.getenv('RENDER') and not app.config['DATABASE_URL']:
-        raise RuntimeError('公開環境ではDATABASE_URLを設定してください。')
+    backend = os.getenv('DATABASE_BACKEND')
+    if backend not in {None, 'postgres', 'sqlite'}:
+        raise RuntimeError('DATABASE_BACKENDはpostgresまたはsqliteを指定してください。')
+    if backend == 'sqlite':
+        app.config['DATABASE_URL'] = None
+        if os.getenv('RENDER'):
+            path = Path(os.getenv('SQLITE_PATH', str(RENDER_DATA_ROOT / 'stoiq' / 'app.db')))
+            if not RENDER_DATA_ROOT.is_dir() or not path.resolve().is_relative_to(RENDER_DATA_ROOT.resolve()):
+                raise RuntimeError('公開SQLiteは既存の永続ディスク内に保存してください。')
+            app.config['SQLITE_PATH'] = str(path)
+            app.config['BACKUP_LEGACY_SQLITE'] = True
+    elif os.getenv('RENDER') and not app.config['DATABASE_URL']:
+        raise RuntimeError('公開環境ではDATABASE_URLか永続ディスク上のSQLiteを明示設定してください。')
+    app.config['DATABASE_BACKEND'] = 'postgres' if app.config['DATABASE_URL'] else 'sqlite'
     secret = os.getenv('SECRET_KEY')
     if not secret:
         if os.getenv('RENDER'):
             configured_path = os.getenv('SESSION_KEY_FILE')
-            if not configured_path and not Path('/var/data').is_dir():
+            if not configured_path and not RENDER_DATA_ROOT.is_dir():
                 raise RuntimeError('SECRET_KEYまたは永続ディスク上のSESSION_KEY_FILEを設定してください。')
-            key_file = Path(configured_path or '/var/data/stoiq/.session-key')
+            key_file = Path(configured_path) if configured_path else RENDER_DATA_ROOT / 'stoiq' / '.session-key'
         else:
             key_file = Path(app.instance_path) / '.session-key'
         key_file.parent.mkdir(parents=True, exist_ok=True)

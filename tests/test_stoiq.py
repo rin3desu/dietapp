@@ -30,7 +30,7 @@ def configured(tmp_path):
         with control.cursor() as cursor:
             cursor.execute('CREATE SCHEMA '+schema)
         pg_url+='?options=-csearch_path%3D'+schema
-    app.config.update(TESTING=True, SECRET_KEY='tests-only', DATABASE_URL=pg_url, DATABASE_READY=True,
+    app.config.update(TESTING=True, SECRET_KEY='tests-only', DATABASE_URL=pg_url, DATABASE_READY=True, BACKUP_LEGACY_SQLITE=False,
         SQLITE_PATH=str(tmp_path/'test.db'), RECIPE_PHOTO_FOLDER=str(tmp_path/'photos'),
         GEMINI_API_KEY=None, FOOD_AI_CLIENT=None, AI_DAILY_LIMIT=10, SESSION_COOKIE_SECURE=False)
     migrate(app.config)
@@ -157,6 +157,19 @@ def test_gym_owner_isolation(configured):
     response=post(c,'/recommend',{'gym_id':'1','target_muscle':'胸','time_minutes':'20'})
     assert response.status_code==200 and b'secret machine' not in response.data
     assert c.get('/gym/1').status_code in (302,404)
+
+
+def test_gym_machine_lifecycle(configured):
+    c=client()
+    assert post(c,'/gym_register',{'gym_name':'test gym','latitude':'35.0','longitude':'139.0'}).status_code==302
+    gid=query('SELECT id FROM gyms')[0]['id']
+    post(c,f'/gym/{gid}/add_machine',{'machine_name':'チェストプレス','target_muscle':'胸'})
+    assert len(query('SELECT * FROM machines'))==1
+    assert c.get(f'/gym/{gid}').status_code==200
+    post(client(2),f'/delete_gym/{gid}')
+    assert len(query('SELECT * FROM gyms'))==1
+    post(c,f'/delete_gym/{gid}')
+    assert query('SELECT * FROM gyms')==[] and query('SELECT * FROM machines')==[]
 
 
 def test_ai_missing_key_and_consent(configured):
@@ -327,6 +340,33 @@ def test_storage_inspection_is_read_only(configured,tmp_path):
     assert report[0]['compatible_users'] is True
     assert report[0]['counts']['users']==2
     assert hashlib.sha256(path.read_bytes()).hexdigest()==digest
+
+
+def test_explicit_persistent_sqlite_and_legacy_backup(configured,tmp_path,monkeypatch):
+    from flask import Flask
+    import security
+    monkeypatch.setenv('RENDER','true')
+    monkeypatch.setenv('DATABASE_BACKEND','sqlite')
+    monkeypatch.setenv('DATABASE_URL','postgresql://old-connection-is-retained-in-environment')
+    monkeypatch.setenv('SQLITE_PATH',str(tmp_path/'legacy.db'))
+    monkeypatch.delenv('SECRET_KEY',raising=False)
+    monkeypatch.delenv('SESSION_KEY_FILE',raising=False)
+    monkeypatch.setattr(security,'RENDER_DATA_ROOT',tmp_path)
+    fresh=Flask('persistent');security.configure_app(fresh)
+    assert fresh.config['DATABASE_URL'] is None
+    assert fresh.config['SQLITE_PATH']==str(tmp_path/'legacy.db')
+    assert os.environ['DATABASE_URL'].startswith('postgresql://old-connection')
+    connection=sqlite3.connect(fresh.config['SQLITE_PATH'])
+    connection.execute('CREATE TABLE users(id INTEGER PRIMARY KEY,username TEXT,password_hash TEXT)')
+    connection.execute('INSERT INTO users VALUES (1,?,?)',('existing','preserve-hash'))
+    connection.commit();connection.close()
+    migrate(fresh.config)
+    backup=sqlite3.connect(fresh.config['SQLITE_PATH']+'.before-stoiq.sqlite3')
+    assert backup.execute('SELECT password_hash FROM users').fetchone()[0]=='preserve-hash'
+    backup.close()
+    connection=sqlite3.connect(fresh.config['SQLITE_PATH'])
+    assert connection.execute('SELECT COUNT(*) FROM users').fetchone()[0]==1
+    connection.close()
 
 
 def test_non_destructive_migrations_and_import(configured,tmp_path):
