@@ -70,7 +70,10 @@ def catalogue():
     extra = []
     catalogue_error = False
     try:
-        extra = load_saved(public=True)
+        if current_app.config.get('DATABASE_READY') is False:
+            catalogue_error = True
+        else:
+            extra = load_saved(public=True)
     except Exception:
         if 'db' in g:
             g.db.rollback()

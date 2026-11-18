@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from google import genai
 from security import configure_app, install_security
-from stoic_db import connect
+from stoic_db import connect, migrate
 
 # ==========================================
 # 1. アプリケーションの初期化
@@ -36,7 +36,14 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 def get_db():
     if 'db' not in g:
         # 辞書型(Row風)で結果を取得できるRealDictCursorを指定して接続
-        g.db = connect(app.config)
+        try:
+            if app.config.get('DATABASE_READY') is False:
+                migrate(app.config)
+                app.config['DATABASE_READY'] = True
+            g.db = connect(app.config)
+        except psycopg2.OperationalError:
+            app.config['DATABASE_READY'] = False
+            raise
     return g.db
 
 @app.teardown_appcontext
@@ -51,6 +58,9 @@ def close_db(e=None):
 # ==========================================
 @app.before_request
 def load_logged_in_user():
+    g.user = None
+    if app.config.get('DATABASE_READY') is False and request.endpoint in {'index', 'static', 'food.catalogue', 'food.detail'}:
+        return
     user_id = session.get('user_id')
     if user_id is None:
         g.user = None
@@ -58,6 +68,15 @@ def load_logged_in_user():
         with get_db().cursor() as cursor:
             cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))
             g.user = cursor.fetchone()
+
+
+@app.errorhandler(psycopg2.OperationalError)
+def database_unavailable(error):
+    app.config['DATABASE_READY'] = False
+    app.logger.warning('Database connection unavailable; credentials and provider details omitted')
+    response = app.make_response((render_template('database_unavailable.html'), 503))
+    response.headers['Retry-After'] = '60'
+    return response
 
 def login_required(view):
     @wraps(view)

@@ -68,6 +68,8 @@ def migrate(config):
         if isinstance(db, SQLiteConnection):
             sql = sql.replace('SERIAL PRIMARY KEY', 'INTEGER PRIMARY KEY AUTOINCREMENT')
         with db.cursor() as cursor:
+            if not isinstance(db, SQLiteConnection):
+                cursor.execute('SELECT pg_advisory_xact_lock(20261118, 9001)')
             for statement in sql.split(';'):
                 if statement.strip():
                     cursor.execute(statement)

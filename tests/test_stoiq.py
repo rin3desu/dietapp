@@ -30,7 +30,7 @@ def configured(tmp_path):
         with control.cursor() as cursor:
             cursor.execute('CREATE SCHEMA '+schema)
         pg_url+='?options=-csearch_path%3D'+schema
-    app.config.update(TESTING=True, SECRET_KEY='tests-only', DATABASE_URL=pg_url,
+    app.config.update(TESTING=True, SECRET_KEY='tests-only', DATABASE_URL=pg_url, DATABASE_READY=True,
         SQLITE_PATH=str(tmp_path/'test.db'), RECIPE_PHOTO_FOLDER=str(tmp_path/'photos'),
         GEMINI_API_KEY=None, FOOD_AI_CLIENT=None, AI_DAILY_LIMIT=10, SESSION_COOKIE_SECURE=False)
     migrate(app.config)
@@ -294,6 +294,39 @@ def test_persistent_session_key_and_startup_hook(configured,tmp_path,monkeypatch
     before=len(query('SELECT * FROM users'))
     runpy.run_path(str(Path(__file__).parents[1]/'gunicorn.conf.py'))['on_starting'](None)
     assert len(query('SELECT * FROM users'))==before
+
+
+def test_database_outage_keeps_public_recipes_available(configured,monkeypatch):
+    import runpy
+    import stoic_db
+    from psycopg2 import OperationalError
+    def unavailable(config):
+        raise OperationalError('test connection unavailable')
+    monkeypatch.setattr(stoic_db,'connect',unavailable)
+    runpy.run_path(str(Path(__file__).parents[1]/'gunicorn.conf.py'))['on_starting'](None)
+    assert app.config['DATABASE_READY'] is False
+    c=client()
+    assert c.get('/').status_code==200
+    assert c.get('/food').get_data(as_text=True).count('<article class="recipe-card">')==5
+    assert c.get('/food/recipes/chicken-broccoli').status_code==200
+    response=c.get('/growth')
+    assert response.status_code==503 and response.headers['Retry-After']=='60'
+    assert 'test connection unavailable' not in response.get_data(as_text=True)
+
+
+def test_storage_inspection_is_read_only(configured,tmp_path):
+    from storage_probe import inspect_storage
+    root=tmp_path/'storage';root.mkdir()
+    path=root/'legacy.db'
+    connection=sqlite3.connect(path)
+    connection.execute('CREATE TABLE users(id INTEGER,username TEXT,password_hash TEXT)')
+    connection.executemany('INSERT INTO users VALUES (?,?,?)',[(1,'test-a','unused'),(2,'test-b','unused')])
+    connection.commit();connection.close()
+    digest=hashlib.sha256(path.read_bytes()).hexdigest()
+    report=inspect_storage(app.logger,root)
+    assert report[0]['compatible_users'] is True
+    assert report[0]['counts']['users']==2
+    assert hashlib.sha256(path.read_bytes()).hexdigest()==digest
 
 
 def test_non_destructive_migrations_and_import(configured,tmp_path):

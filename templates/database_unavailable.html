@@ -1,0 +1,5 @@
+{% extends 'layout.html' %}
+{% block title %}記録機能は一時的に利用できません — STOIQ{% endblock %}
+{% block content %}
+<div class="stoiq-page"><section class="s-panel"><span class="eyebrow">PLEASE TRY AGAIN LATER</span><h1>記録機能は、ただいま接続待ちです。</h1><p>アカウントや記録の保存先に接続できませんでした。時間をおいてから、もう一度お試しください。</p><p>掲載レシピの閲覧・食材検索は、そのままご利用いただけます。</p><a class="s-button" href="{{ url_for('food.catalogue') }}">レシピを探す →</a><p class="s-fineprint">今回の操作は保存できていません。接続が戻ったら、入力をやり直してください。</p></section></div>
+{% endblock %}
