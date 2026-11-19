@@ -8,12 +8,13 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/stoiq.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ideals.css') }}">
 </head>
 <body {% block body_attributes %}{% endblock %}>
 
     <header class="main-header">
         <a href="{{ url_for('index') }}" class="site-title">STOIQ<span>日々、理想を磨く。</span></a>
-        <div class="desktop-links"><a href="{{ url_for('food.catalogue') }}">食事を整える</a><a href="{{ url_for('recommend_page') }}">身体を鍛える</a><a href="{{ url_for('growth.page') }}">自分を磨く</a><a class="nav-account" href="{{ url_for('mypage') if g.user else url_for('login') }}">{{ 'マイページ' if g.user else 'ログイン' }} ↗</a></div>
+        <div class="desktop-links"><a href="{{ url_for('ideals.page') }}">理想の自分</a><a href="{{ url_for('food.catalogue') }}">食事を整える</a><a href="{{ url_for('recommend_page') }}">身体を鍛える</a><a href="{{ url_for('growth.page') }}">自分を磨く</a><a class="nav-account" href="{{ url_for('mypage') if g.user else url_for('login') }}">{{ 'マイページ' if g.user else 'ログイン' }} ↗</a></div>
         
         <button class="hamburger-menu" aria-label="メニューを開く" aria-controls="main-navigation" aria-expanded="false">
             <span class="bar"></span>
@@ -26,6 +27,7 @@
         <ul>
             <li><a href="{{ url_for('index') }}">トップページ</a></li>
             <li><a href="{{ url_for('food.catalogue') }}">食事・レシピを探す</a></li>
+            <li><a href="{{ url_for('ideals.page') }}">理想の自分を設定</a></li>
             <li><a href="{{ url_for('growth.page') }}">90日間の成長記録</a></li>
             
             {% if g.user %}

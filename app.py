@@ -522,9 +522,11 @@ def recommend_page():
 
 from food import food
 from growth import growth
+from ideals import ideals
 app.config['GET_DB'] = get_db
 app.register_blueprint(food)
 app.register_blueprint(growth)
+app.register_blueprint(ideals)
 
 if __name__ == "__main__":
     app.run(debug=True)

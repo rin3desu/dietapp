@@ -1,14 +1,28 @@
 import hmac
+import io
 import os
 import secrets
 from pathlib import Path
 from urllib.parse import urlsplit
-from flask import abort, jsonify, request, session
+from flask import Request, abort, jsonify, request, session
 
 RENDER_DATA_ROOT = Path('/var/data')
 
+
+class StoiqRequest(Request):
+    def _get_file_stream(self,total_content_length,content_type,filename=None,content_length=None):
+        # This route is bounded by MAX_CONTENT_LENGTH (6MB). Selfies never spool to disk.
+        if self.path.startswith('/ideals/') and self.path.endswith('/portrait'):
+            return io.BytesIO()
+        return super()._get_file_stream(total_content_length,content_type,filename,content_length)
+
 def configure_app(app):
+    app.request_class = StoiqRequest
     app.config.update(DATABASE_URL=os.getenv('DATABASE_URL'), SQLITE_PATH=os.getenv('SQLITE_PATH', str(Path(app.instance_path) / 'stoiq-local.db')), GEMINI_API_KEY=os.getenv('GEMINI_API_KEY'), GEMINI_MODEL=os.getenv('GEMINI_MODEL', 'gemini-2.5-flash'), AI_DAILY_LIMIT=int(os.getenv('AI_DAILY_LIMIT', '10')), MAX_CONTENT_LENGTH=6 * 1024 * 1024, SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax', SESSION_COOKIE_SECURE=bool(os.getenv('RENDER') or os.getenv('PUBLIC_ORIGIN', '').startswith('https://')))
+    app.config.update(GEMINI_IMAGE_MODEL=os.getenv('GEMINI_IMAGE_MODEL','gemini-3.1-flash-lite-image'),
+                      IDEAL_TEXT_MODEL=os.getenv('IDEAL_TEXT_MODEL',app.config['GEMINI_MODEL']),
+                      IDEAL_IMAGE_DAILY_LIMIT=max(1,int(os.getenv('IDEAL_IMAGE_DAILY_LIMIT','3'))),
+                      IDEAL_TEXT_DAILY_LIMIT=max(1,int(os.getenv('IDEAL_TEXT_DAILY_LIMIT','10'))))
     backend = os.getenv('DATABASE_BACKEND')
     if backend not in {None, 'postgres', 'sqlite'}:
         raise RuntimeError('DATABASE_BACKENDはpostgresまたはsqliteを指定してください。')
@@ -76,6 +90,6 @@ def install_security(app):
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-        if request.path.startswith('/growth') or request.path.startswith('/food/mine') or session.get('user_id'):
+        if request.path.startswith(('/growth','/ideals','/food/mine')) or session.get('user_id'):
             response.headers['Cache-Control'] = 'private, no-store'
         return response

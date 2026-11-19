@@ -32,7 +32,8 @@ def configured(tmp_path):
         pg_url+='?options=-csearch_path%3D'+schema
     app.config.update(TESTING=True, SECRET_KEY='tests-only', DATABASE_URL=pg_url, DATABASE_READY=True, BACKUP_LEGACY_SQLITE=False,
         SQLITE_PATH=str(tmp_path/'test.db'), RECIPE_PHOTO_FOLDER=str(tmp_path/'photos'),
-        GEMINI_API_KEY=None, FOOD_AI_CLIENT=None, AI_DAILY_LIMIT=10, SESSION_COOKIE_SECURE=False)
+        GEMINI_API_KEY=None, FOOD_AI_CLIENT=None, IDEAL_TEXT_CLIENT=None, IDEAL_IMAGE_CLIENT=None,
+        IDEAL_IMAGE_DAILY_LIMIT=3,IDEAL_TEXT_DAILY_LIMIT=10, AI_DAILY_LIMIT=10, SESSION_COOKIE_SECURE=False)
     migrate(app.config)
     with app.app_context():
         with get_db().cursor() as c:

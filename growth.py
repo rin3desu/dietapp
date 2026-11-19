@@ -144,9 +144,11 @@ def sparkline(records, key):
 def page(tab='dashboard'):
     if tab not in {'dashboard', 'habits', 'reflection', 'assessment', 'review', 'body'}:
         abort(404)
+    from ideals import goal as load_ideal
+    ideal_goal = load_ideal()
     c = challenge()
     if c is None:
-        return render_template('growth.html', challenge=None, tab=tab, today=today(), categories=CATEGORIES)
+        return render_template('growth.html', ideal_goal=ideal_goal, challenge=None, tab=tab, today=today(), categories=CATEGORIES)
     end = shift(c['start_date'], 89)
     last = min(today(), end)
     selected = request.args.get('date', last)
@@ -191,7 +193,7 @@ def page(tab='dashboard'):
     day_number = max(0, min(90, (date.fromisoformat(today()) - date.fromisoformat(c['start_date'])).days + 1))
     week_days = [shift(monday(last), i) for i in range(7) if c['start_date'] <= shift(monday(last), i) <= last]
     current_week = achievement(habits, logs, week_days)
-    return render_template('growth.html', challenge=c, emotions=emotions, tab=tab, today=today(), selected=selected, end=end, last=last, day_number=day_number, time_progress=round(day_number / 90 * 100), phase=min(3, max(1, (max(day_number, 1) - 1) // 30 + 1)), habits=habits, planned=[h for h in habits if scheduled(h, selected)], logs=logs, checked={l['habit_id'] for l in logs if l['date'] == selected and l['completed']}, daily=achievement(habits, logs, [selected]), weekly=current_week, streak=streak(habits, logs, last, c['start_date']), categories=CATEGORIES, ratings=ratings, radar_score=radar(ratings, 'score'), radar_target=radar(ratings, 'target_score'), radar_grids=[radar([dict(score=n)] * 5, 'score') for n in [2,4,6,8,10]], reflection=reflection, reflections=reflections, cells=cells, reflected_days=reflected_days, month=f'{year:04}-{month:02}', previous_month=previous_month, next_month=next_month, weeks=list(reversed(weeks)), week=week, summary=summary, saved=saved_data, comparison=comparison, reviews=reviews, measurements=measurements, weight_chart=sparkline(measurements, 'weight'), waist_chart=sparkline(measurements, 'waist'), imported_workouts=imported_workouts)
+    return render_template('growth.html', ideal_goal=ideal_goal, challenge=c, emotions=emotions, tab=tab, today=today(), selected=selected, end=end, last=last, day_number=day_number, time_progress=round(day_number / 90 * 100), phase=min(3, max(1, (max(day_number, 1) - 1) // 30 + 1)), habits=habits, planned=[h for h in habits if scheduled(h, selected)], logs=logs, checked={l['habit_id'] for l in logs if l['date'] == selected and l['completed']}, daily=achievement(habits, logs, [selected]), weekly=current_week, streak=streak(habits, logs, last, c['start_date']), categories=CATEGORIES, ratings=ratings, radar_score=radar(ratings, 'score'), radar_target=radar(ratings, 'target_score'), radar_grids=[radar([dict(score=n)] * 5, 'score') for n in [2,4,6,8,10]], reflection=reflection, reflections=reflections, cells=cells, reflected_days=reflected_days, month=f'{year:04}-{month:02}', previous_month=previous_month, next_month=next_month, weeks=list(reversed(weeks)), week=week, summary=summary, saved=saved_data, comparison=comparison, reviews=reviews, measurements=measurements, weight_chart=sparkline(measurements, 'weight'), waist_chart=sparkline(measurements, 'waist'), imported_workouts=imported_workouts)
 
 
 @growth.post('/start')

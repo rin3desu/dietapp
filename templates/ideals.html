@@ -1,0 +1,77 @@
+{% extends 'layout.html' %}
+{% block title %}理想の自分 — STOIQ{% endblock %}
+{% block content %}
+<div class="stoiq-page ideal-page">
+  <div class="page-kicker"><span class="eyebrow">YOUR NORTH STAR</span><span class="ideal-private">◈ あなた専用・非公開</span></div>
+  <header class="s-page-heading"><div><h1>なりたい自分を、<br><span class="ideal-accent">毎日の選択の基準に。</span></h1><p>理想を描く。憧れをひもとく。今日の行動に変える。<br>誰かのコピーではなく、あなたらしい目標をつくろう。</p></div><a class="s-button outline" href="{{ url_for('growth.page') }}">90日間の記録へ ↗</a></header>
+
+  <section class="ideal-overview">
+    <div class="ideal-vision-card">
+      <span class="eyebrow">MY IDEAL SELF</span>
+      <h2>{{ ideal.title if ideal else 'まだ名前のない、これからの自分。' }}</h2>
+      <p class="ideal-vision">{{ ideal.vision if ideal else 'まずは、どんな自分でありたいかを言葉にするところから。見た目、振る舞い、日々の姿勢。あなたにとって大切なものを残そう。' }}</p>
+      {% if ideal and ideal.why %}<div class="ideal-why"><span>この目標を選ぶ理由</span><p>{{ ideal.why }}</p></div>{% endif %}
+      {% if ideal and ideal.target_date %}<p class="ideal-date">目標日 <strong>{{ ideal.target_date }}</strong></p>{% endif %}
+      <a class="text-link" href="#goal-edit">{{ '目標を編集する' if ideal else '理想を言葉にする' }} ↓</a>
+    </div>
+    <div class="ideal-portrait-card">
+      {% if ideal and ideal.image_base64 %}
+        <img class="ideal-portrait" src="{{ url_for('ideals.image',ideal_id=ideal.id,v=ideal.image_revision) }}" alt="自分の顔を基にAIで可視化した理想の姿。実際の変化を保証するものではありません。">
+        <span class="ideal-image-label">AI VISUALIZATION / あなたのためのイメージ</span>
+      {% else %}
+        <div class="ideal-placeholder" aria-label="理想の姿の画像はまだありません"><div class="ideal-orbit"><span>YOU</span></div><span class="eyebrow">BECOMING, NOT COMPARING.</span><p>目指すのは、<br>自分らしいアップデート。</p></div>
+      {% endif %}
+    </div>
+  </section>
+  <nav class="ideal-paths" aria-label="理想をつくる方法"><a href="#goal-edit"><span>01 / DEFINE</span><strong>理想を言葉にする ↗</strong></a><a href="#portrait"><span>02 / VISUALIZE</span><strong>自撮りから描く ↗</strong></a><a href="#rolemodel"><span>03 / LEARN</span><strong>憧れを行動に変える ↗</strong></a></nav>
+
+  <section id="goal-edit" class="s-panel ideal-section">
+    <div class="ideal-section-intro"><span class="eyebrow">01 / YOUR OWN STANDARD</span><h2>目標の軸を、決めよう。</h2><p>外見だけでなく、どんな考え方や振る舞いを大切にしたいかも。保存した内容は、あなただけに表示されます。</p></div>
+    <form id="ideal-goal-form" action="{{ url_for('ideals.save') }}" method="post" class="growth-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>目標に名前をつける<input name="title" maxlength="80" value="{{ ideal.title if ideal else '' }}" placeholder="例：余裕と清潔感のある、芯の強い自分" required></label>
+      <label>自分の理想の姿<textarea name="vision" maxlength="1500" rows="4" placeholder="例：姿勢がよく、相手の話を丁寧に聞き、自分との約束を守れる人になりたい。" required>{{ ideal.vision if ideal else '' }}</textarea></label>
+      <label>なぜ、そうなりたい？<textarea name="why" maxlength="1000" rows="2" placeholder="大切にしたい価値観や、この目標を選んだ理由">{{ ideal.why if ideal else '' }}</textarea></label>
+      <label>目標日（任意）<input name="target_date" type="date" value="{{ ideal.target_date or '' if ideal else '' }}"></label>
+      <div class="ideal-role-fields" id="rolemodel"><span class="eyebrow">OPTIONAL / YOUR ROLE MODEL</span><h3>憧れの人物はいますか？</h3><p class="s-fineprint">実在の人でも、作品の登場人物でも。具体的な言動を材料に、その魅力をあなたの行動へ翻訳します。</p>
+        <div class="form-columns"><label>人物名<input name="person_name" maxlength="100" value="{{ ideal.person_name if ideal else '' }}" placeholder="例：好きなアスリート・作品の登場人物"></label><label>人物の種類<select name="person_kind"><option value="real" {{ 'selected' if not ideal or ideal.person_kind == 'real' }}>実在する人物</option><option value="fictional" {{ 'selected' if ideal and ideal.person_kind == 'fictional' }}>架空の人物・キャラクター</option></select></label></div>
+        <label>作品名・人物の説明・印象に残った言動<textarea name="person_context" maxlength="2000" rows="4" placeholder="分析には20文字以上の具体的な説明が必要です。例：失敗しても他人のせいにせず、毎朝基礎練習を続けている場面が印象的。">{{ ideal.person_context if ideal else '' }}</textarea></label>
+        <label>どんなところに憧れる？<textarea name="admiration" maxlength="1000" rows="3" placeholder="例：結果よりも日々の積み重ねを大切にする姿勢と、人への丁寧な接し方。">{{ ideal.admiration if ideal else '' }}</textarea></label>
+      </div>
+      <button class="s-button">理想の自分を保存する ↗</button><p class="s-fineprint">この保存ではAIへ送信しません。人物情報や理想を変更すると、以前の分析はリセットします。生成済み画像には、生成時の希望内容を残します。</p>
+    </form>
+  </section>
+
+  <section id="portrait" class="s-panel ideal-section">
+    <div class="ideal-section-intro"><span class="eyebrow">02 / VISUALIZE YOUR NEXT SELF</span><h2>自分の顔を基に、<br>理想の雰囲気を描く。</h2><p>髪型、服装、姿勢、清潔感。自撮りをベースに、自分らしい理想の一枚をつくろう。</p><p class="s-fineprint">AI画像は目標のイメージです。顔の再現度や、実際の外見の変化を保証するものではありません。この機能の画像を食事レシピには使用しません。</p></div>
+    {% if ideal %}
+    <div><form id="ideal-portrait-form" data-url="{{ url_for('ideals.portrait',ideal_id=ideal.id) }}" class="growth-form">
+      <label>自撮りする / 写真を選ぶ（5MB以内）<input id="ideal-selfie" name="selfie" type="file" accept="image/jpeg,image/png,image/webp" capture="user" required></label>
+      <p class="s-fineprint">スマホではカメラを起動できます。端末によっては写真選択が表示されます。HEICはJPEGへ変換してください。</p>
+      <img id="ideal-selfie-preview" class="ideal-selfie-preview" alt="選択した自撮り写真のプレビュー" hidden>
+      <label>どんな外見・雰囲気にしたい？<textarea name="appearance" minlength="5" maxlength="1500" rows="4" placeholder="例：自分の顔立ちは残して、自然な短髪と落ち着いた服装、背筋の伸びた清潔感のある雰囲気に。" required>{{ ideal.image_prompt or '' }}</textarea></label>
+      <label class="s-checkbox"><input type="checkbox" name="own_photo" value="yes" required><span>自分本人の、使用する権利のある写真です。</span></label>
+      <label class="s-checkbox"><input type="checkbox" name="photo_consent" value="yes" required><span>選んだ顔写真と上の希望内容をGoogle Geminiへ送信して、画像を生成することを確認しました。</span></label>
+      <button class="s-button" {{ 'disabled' if not image_available }}>{{ '自分を基に理想の姿を生成する ↗' if image_available else '画像AIは接続準備中' }}</button>
+      <p class="s-fineprint">元写真を保存用DBには残しません。生成画像だけを非公開で保存します。1日3回まで（失敗した呼び出しも含む）。生成には時間がかかる場合があります。画像モデルの利用権限や課金設定が必要な場合があります。Google側の取り扱いは<a class="text-link" href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener noreferrer">Gemini API利用条件</a>に従います。</p>
+      <p class="s-notice ideal-status" role="status" hidden></p>
+    </form>
+    {% if ideal.image_base64 %}<div class="ideal-saved-image"><span class="eyebrow">SAVED AI IMAGE / 本人だけに表示</span><p class="s-fineprint">生成時の希望：{{ ideal.image_prompt }}</p><a class="text-link" href="{{ url_for('ideals.image',ideal_id=ideal.id,download='1') }}">AI画像をダウンロード ↘</a><form method="post" action="{{ url_for('ideals.remove_image',ideal_id=ideal.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="s-button outline">この生成画像を削除する</button></form></div>{% endif %}</div>
+    {% else %}<div class="s-empty"><p>先に「理想を言葉にする」で目標を保存すると使えます。</p><a class="text-link" href="#goal-edit">目標を保存する ↑</a></div>{% endif %}
+  </section>
+
+  <section id="analysis" class="s-panel ideal-section">
+    <div class="ideal-section-intro"><span class="eyebrow">03 / ADMIRATION INTO ACTION</span><h2>憧れを、<br>今日の行動に変える。</h2><p>魅力に感じる点、考え方の切り替え、続けやすい習慣。あなたの目標とロールモデルの言動をつなげます。</p><p class="s-fineprint">入力したエピソードに基づくAIの解釈です。本人の内面を確定する分析や、事実の裏取りではありません。顔写真から性格を分析することはありません。</p></div>
+    <div>{% if ideal %}<form id="ideal-analysis-form" class="growth-form" data-url="{{ url_for('ideals.analyze',ideal_id=ideal.id) }}"><div class="ideal-model-name"><span class="eyebrow">YOUR ROLE MODEL</span><h3>{{ ideal.person_name or '人物情報を入力してください' }}</h3><p>{{ ideal.admiration }}</p></div><label class="s-checkbox"><input type="checkbox" name="consent" required><span>保存した理想の姿・人物名・人物の種類・具体的な言動・憧れる理由をGoogle Geminiへ送信することを確認しました。顔写真・日記・身体の記録は送りません。</span></label><button class="s-button" {{ 'disabled' if not text_available }}>{{ '魅力と行動・習慣を分析する ↗' if text_available else '分析AIは接続準備中' }}</button><p class="s-fineprint">先に人物情報を保存してください。分析は1日10回まで。前回の分析は、成功した場合に更新します。</p><p class="s-notice ideal-status" role="status" hidden></p></form>{% else %}<div class="s-empty"><p>目標と、憧れの人物の情報を保存してください。</p><a class="text-link" href="#rolemodel">ロールモデルを入力する ↑</a></div>{% endif %}</div>
+    {% if analysis %}<div class="ideal-analysis-results">
+      <div class="ideal-summary"><span class="eyebrow">A STANDARD YOU CAN LIVE BY</span><h3>あなたの目標につながる魅力</h3><p>{{ analysis.summary }}</p></div>
+      <div class="ideal-quality-grid">{% for item in analysis.qualities %}<article><span class="eyebrow">{{ '%02d'|format(loop.index) }}</span><h3>{{ item.trait }}</h3><p>{{ item.interpretation }}</p><p class="s-fineprint">入力の根拠：{{ item.evidence }}</p></article>{% endfor %}</div>
+      <h3 class="ideal-subheading">意識を、少しずつ切り替える。</h3><div class="ideal-mindsets">{% for m in analysis.mindsets %}<article><div><span>{{ m.before }}</span><b aria-hidden="true">→</b><strong>{{ m.after }}</strong></div><p>{{ m.practice }}</p></article>{% endfor %}</div>
+      <div class="section-line"><h3>続けられる習慣にする</h3><a class="text-link" href="{{ url_for('growth.page',tab='habits') }}">習慣の記録へ ↗</a></div>
+      <div class="ideal-habit-grid">{% for h in analysis.habits %}<article class="s-panel"><span class="eyebrow">{% if h.frequency == 'daily' %}毎日{% else %}{% for d in h.weekdays %}{{ ['日','月','火','水','木','金','土'][d] }}{{ '・' if not loop.last }}{% endfor %}{% endif %} / {{ h.minutes }} MIN</span><h3>{{ h.name }}</h3><p class="ideal-cue">{{ h.cue }}</p><p class="s-fineprint">{{ h.reason }}</p><form method="post" action="{{ url_for('ideals.add_habit',ideal_id=ideal.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="revision" value="{{ ideal.revision }}"><input type="hidden" name="index" value="{{ loop.index0 }}"><button class="s-button outline" {{ 'disabled' if loop.index0 in added }}>{{ '✓ 習慣へ追加済み' if loop.index0 in added else '90日間の習慣に追加 ＋' }}</button></form></article>{% endfor %}</div>
+      <div class="ideal-first-step"><span class="eyebrow">ONE THING, TODAY.</span><h3>今日の一歩</h3><p>{{ analysis.first_step }}</p></div><p class="s-fineprint">分析の前提・不確かな点：{{ analysis.uncertainty }}</p>
+    </div>{% endif %}
+  </section>
+</div>
+<script src="{{ url_for('static',filename='js/ideals.js') }}" defer></script>
+{% endblock %}
